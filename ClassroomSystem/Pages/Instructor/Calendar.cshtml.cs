@@ -49,8 +49,18 @@ namespace ClassroomSystem.Pages.Instructor
 
                 if (CurrentTerm == null)
                 {
-                    TempData["Error"] = "No active term found.";
-                    return Page();
+                    _logger.LogWarning("No active term found. Creating a default term...");
+                    CurrentTerm = new Term
+                    {
+                        Name = "Current Term",
+                        StartDate = DateTime.Today,
+                        EndDate = DateTime.Today.AddMonths(4),
+                        IsActive = true,
+                        Description = "Automatically created term"
+                    };
+                    _context.Terms.Add(CurrentTerm);
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation($"Created default term: {CurrentTerm.Name} ({CurrentTerm.StartDate:d} - {CurrentTerm.EndDate:d})");
                 }
 
                 // Get active classrooms

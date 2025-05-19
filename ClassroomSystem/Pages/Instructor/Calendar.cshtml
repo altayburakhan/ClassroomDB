@@ -26,6 +26,15 @@
         </div>
     </div>
 
+    @if (Model.CurrentTerm != null)
+    {
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            <i class="fas fa-calendar-alt me-2"></i>
+            Current Term: @Model.CurrentTerm.Name (@Model.CurrentTerm.StartDate.ToShortDateString() - @Model.CurrentTerm.EndDate.ToShortDateString())
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
     @if (TempData["Error"] != null)
     {
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
