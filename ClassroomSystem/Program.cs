@@ -23,6 +23,9 @@ builder.Services.AddRazorPages(options =>
     // Add role-based authorization for specific folders
     options.Conventions.AuthorizeFolder("/Admin", "RequireAdminRole");
     options.Conventions.AuthorizeFolder("/Instructor", "RequireInstructorRole");
+}).AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
 });
 
 // Add DbContext
