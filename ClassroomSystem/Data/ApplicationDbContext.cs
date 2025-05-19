@@ -19,6 +19,7 @@ namespace ClassroomSystem.Data
         public DbSet<Logs> Logs { get; set; }
         public DbSet<AcademicTerm> AcademicTerms { get; set; }
         public DbSet<SystemLog> SystemLogs { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

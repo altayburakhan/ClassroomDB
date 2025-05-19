@@ -6,6 +6,11 @@
     Layout = "Instructor/_Layout";
 }
 
+@* Add CSRF Token *@
+<form id="antiforgeryForm">
+    @Html.AntiForgeryToken()
+</form>
+
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3">My Reservations</h1>
@@ -33,34 +38,31 @@
                         @foreach (var reservation in Model.Reservations)
                         {
                             <tr>
-                                <td>@reservation.Classroom.Name</td>
-                                <td>@reservation.Date.ToShortDateString()</td>
-                                <td>@reservation.StartTime.ToString(@"hh\:mm") - @reservation.EndTime.ToString(@"hh\:mm")</td>
+                                <td>@reservation.Classroom?.Name</td>
+                                <td>@reservation.StartTime.ToShortDateString()</td>
+                                <td>@reservation.StartTime.ToShortTimeString() - @reservation.EndTime.ToShortTimeString()</td>
                                 <td>@reservation.Purpose</td>
                                 <td>
-                                    @switch (reservation.Status)
-                                    {
-                                        case ReservationStatus.Approved:
-                                            <span class="badge bg-success">Approved</span>
-                                            break;
-                                        case ReservationStatus.Pending:
-                                            <span class="badge bg-warning">Pending</span>
-                                            break;
-                                        case ReservationStatus.Rejected:
-                                            <span class="badge bg-danger">Rejected</span>
-                                            break;
-                                    }
+                                    <span class="badge bg-@(reservation.Status switch {
+                                        ReservationStatus.Pending => "warning",
+                                        ReservationStatus.Approved => "success",
+                                        ReservationStatus.Rejected => "danger",
+                                        _ => "secondary"
+                                    })">@reservation.Status</span>
                                 </td>
-                                <td>@reservation.CreatedAt.ToString("g")</td>
+                                <td>@reservation.CreatedAt.ToShortDateString()</td>
                                 <td>
                                     <button type="button" class="btn btn-sm btn-info" onclick="viewReservation(@reservation.Id)">
                                         <i class="fas fa-eye"></i>
                                     </button>
                                     @if (reservation.Status == ReservationStatus.Pending)
                                     {
-                                        <button type="button" class="btn btn-sm btn-danger" onclick="cancelReservation(@reservation.Id)">
-                                            <i class="fas fa-times"></i>
-                                        </button>
+                                        <form method="post" asp-page-handler="Cancel" asp-route-id="@reservation.Id" style="display: inline;">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to cancel this reservation?')">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </form>
                                     }
                                 </td>
                             </tr>
@@ -99,24 +101,6 @@
                     document.getElementById('reservationDetails').innerHTML = html;
                     new bootstrap.Modal(document.getElementById('viewReservationModal')).show();
                 });
-        }
-
-        function cancelReservation(id) {
-            if (confirm('Are you sure you want to cancel this reservation?')) {
-                fetch(`?handler=Cancel&id=${id}`, {
-                    method: 'POST',
-                    headers: {
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                    }
-                })
-                .then(response => {
-                    if (response.ok) {
-                        window.location.reload();
-                    } else {
-                        alert('Error canceling reservation');
-                    }
-                });
-            }
         }
     </script>
 } 

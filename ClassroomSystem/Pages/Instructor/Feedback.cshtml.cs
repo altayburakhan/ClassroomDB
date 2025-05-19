@@ -32,8 +32,8 @@ namespace ClassroomSystem.Pages.Instructor
 
         [BindProperty]
         public Feedback Feedback { get; set; }
-        public List<Classroom> Classrooms { get; set; }
-        public List<Feedback> PreviousFeedback { get; set; }
+        public List<Classroom> Classrooms { get; set; } = new List<Classroom>();
+        public List<Feedback> PreviousFeedback { get; set; } = new List<Feedback>();
 
         public async Task<IActionResult> OnGetAsync()
         {
@@ -41,9 +41,10 @@ namespace ClassroomSystem.Pages.Instructor
             {
                 var userId = GetCurrentUserId();
                 
-                // Get classrooms that the instructor has used
+                // Get all active classrooms
                 Classrooms = await _context.Classrooms
-                    .Where(c => c.Reservations.Any(r => r.UserId == userId && r.Status == ReservationStatus.Approved))
+                    .Where(c => c.IsActive)
+                    .OrderBy(c => c.Name)
                     .ToListAsync();
 
                 // Get previous feedback
@@ -65,19 +66,32 @@ namespace ClassroomSystem.Pages.Instructor
 
         public async Task<IActionResult> OnPostSubmitFeedbackAsync(int classroomId, int rating, string comment)
         {
-            if (!ModelState.IsValid)
-            {
-                return Page();
-            }
-
             try
             {
+                if (!ModelState.IsValid)
+                {
+                    await OnGetAsync(); // Reload the page data
+                    return Page();
+                }
+
                 var userId = GetCurrentUserId();
+
+                // Validate classroom exists and is active
+                var classroom = await _context.Classrooms
+                    .FirstOrDefaultAsync(c => c.Id == classroomId && c.IsActive);
+                
+                if (classroom == null)
+                {
+                    ModelState.AddModelError("", "Selected classroom is not available");
+                    await OnGetAsync(); // Reload the page data
+                    return Page();
+                }
 
                 // Validate rating
                 if (rating < 1 || rating > 5)
                 {
                     ModelState.AddModelError("", "Rating must be between 1 and 5");
+                    await OnGetAsync(); // Reload the page data
                     return Page();
                 }
 
@@ -85,6 +99,7 @@ namespace ClassroomSystem.Pages.Instructor
                 if (string.IsNullOrWhiteSpace(comment) || comment.Length > 500)
                 {
                     ModelState.AddModelError("", "Comment must be between 1 and 500 characters");
+                    await OnGetAsync(); // Reload the page data
                     return Page();
                 }
 
@@ -101,15 +116,17 @@ namespace ClassroomSystem.Pages.Instructor
                 await _context.SaveChangesAsync();
 
                 // Send email notification to admin
-                var classroom = await _context.Classrooms.FindAsync(classroomId);
                 var user = await _context.Users.FindAsync(userId);
-                await _emailService.SendFeedbackNotificationEmailAsync(
-                    "admin@example.com", // Replace with actual admin email
-                    user.Name,
-                    classroom.Name,
-                    rating,
-                    comment
-                );
+                if (user != null)
+                {
+                    await _emailService.SendFeedbackNotificationEmailAsync(
+                        "admin@example.com", // Replace with actual admin email
+                        user.Name,
+                        classroom.Name,
+                        rating,
+                        comment
+                    );
+                }
 
                 TempData["Success"] = "Feedback submitted successfully.";
                 return RedirectToPage();
@@ -118,6 +135,7 @@ namespace ClassroomSystem.Pages.Instructor
             {
                 _logger.LogError(ex, "Error submitting feedback");
                 TempData["Error"] = "An error occurred while submitting feedback.";
+                await OnGetAsync(); // Reload the page data
                 return Page();
             }
         }

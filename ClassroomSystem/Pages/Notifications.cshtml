@@ -1,0 +1,41 @@
+@page
+@model ClassroomSystem.Pages.NotificationsModel
+@{
+    ViewData["Title"] = "Notifications";
+}
+
+<div class="container mt-4">
+    <h2>Notifications</h2>
+
+    <div class="list-group mt-4">
+        @if (!Model.Notifications.Any())
+        {
+            <div class="alert alert-info">
+                No notifications found.
+            </div>
+        }
+        else
+        {
+            foreach (var notification in Model.Notifications)
+            {
+                <div class="list-group-item @(!notification.IsRead ? "list-group-item-light" : "")">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">@notification.Title</h5>
+                        <small class="text-muted">@notification.CreatedAt.ToLocalTime().ToString("g")</small>
+                    </div>
+                    <p class="mb-1">@notification.Message</p>
+                    @if (!notification.IsRead)
+                    {
+                        <form method="post" asp-page-handler="MarkAsRead" asp-route-id="@notification.Id" class="d-inline">
+                            <button type="submit" class="btn btn-link btn-sm text-muted p-0">Mark as read</button>
+                        </form>
+                    }
+                    @if (notification.ReservationId.HasValue)
+                    {
+                        <a href="/Instructor/Reservations?id=@notification.ReservationId" class="btn btn-link btn-sm text-muted p-0 ms-2">View Reservation</a>
+                    }
+                </div>
+            }
+        }
+    </div>
+</div> 

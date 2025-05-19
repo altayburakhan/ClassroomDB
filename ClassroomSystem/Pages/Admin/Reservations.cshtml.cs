@@ -88,20 +88,24 @@ namespace ClassroomSystem.Pages.Admin
             {
                 await _emailService.SendReservationApprovalEmailAsync(
                     reservation.User.Email,
+                    reservation.UserId,
                     $"{reservation.User.FirstName} {reservation.User.LastName}",
                     reservation.Classroom.Name,
                     reservation.StartTime.DayOfWeek.ToString(),
-                    $"{reservation.StartTime:HH:mm} - {reservation.EndTime:HH:mm}");
+                    $"{reservation.StartTime:HH:mm} - {reservation.EndTime:HH:mm}",
+                    reservation.Id);
             }
             else if (status == ReservationStatus.Rejected)
             {
                 await _emailService.SendReservationRejectionEmailAsync(
                     reservation.User.Email,
+                    reservation.UserId,
                     $"{reservation.User.FirstName} {reservation.User.LastName}",
                     reservation.Classroom.Name,
                     reservation.StartTime.DayOfWeek.ToString(),
                     $"{reservation.StartTime:HH:mm} - {reservation.EndTime:HH:mm}",
-                    rejectionReason);
+                    rejectionReason,
+                    reservation.Id);
             }
 
             return RedirectToPage();
@@ -249,10 +253,12 @@ namespace ClassroomSystem.Pages.Admin
             // Send approval email
             await _emailService.SendReservationApprovalEmailAsync(
                 reservation.User.Email,
+                reservation.UserId,
                 $"{reservation.User.FirstName} {reservation.User.LastName}",
                 reservation.Classroom.Name,
                 reservation.StartTime.DayOfWeek.ToString(),
-                $"{reservation.StartTime:HH:mm} - {reservation.EndTime:HH:mm}");
+                $"{reservation.StartTime:HH:mm} - {reservation.EndTime:HH:mm}",
+                reservation.Id);
 
             return RedirectToPage();
         }
@@ -276,11 +282,13 @@ namespace ClassroomSystem.Pages.Admin
             // Send rejection email
             await _emailService.SendReservationRejectionEmailAsync(
                 reservation.User.Email,
+                reservation.UserId,
                 $"{reservation.User.FirstName} {reservation.User.LastName}",
                 reservation.Classroom.Name,
                 reservation.StartTime.DayOfWeek.ToString(),
                 $"{reservation.StartTime:HH:mm} - {reservation.EndTime:HH:mm}",
-                reason);
+                reason,
+                reservation.Id);
 
             return RedirectToPage();
         }

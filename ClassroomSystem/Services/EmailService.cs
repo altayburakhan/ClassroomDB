@@ -5,7 +5,6 @@ using System.Net.Mail;
 using System.Net;
 using Microsoft.Extensions.Configuration;
 using ClassroomSystem.Models;
-using Microsoft.EntityFrameworkCore;
 using ClassroomSystem.Data;
 
 namespace ClassroomSystem.Services
@@ -14,48 +13,33 @@ namespace ClassroomSystem.Services
     {
         private readonly ILogger<EmailService> _logger;
         private readonly IConfiguration _configuration;
+        private readonly ApplicationDbContext _context;
         private readonly string _smtpServer;
         private readonly int _smtpPort;
         private readonly string _smtpUsername;
         private readonly string _smtpPassword;
         private readonly string _fromEmail;
         private readonly string _fromName;
-        private readonly ApplicationDbContext _context;
 
         public EmailService(ILogger<EmailService> logger, IConfiguration configuration, ApplicationDbContext context)
         {
             _logger = logger;
             _configuration = configuration;
+            _context = context;
+            
             _smtpServer = _configuration["EmailSettings:SmtpServer"];
             _smtpPort = int.Parse(_configuration["EmailSettings:SmtpPort"]);
             _smtpUsername = _configuration["EmailSettings:SmtpUsername"];
             _smtpPassword = _configuration["EmailSettings:SmtpPassword"];
             _fromEmail = _configuration["EmailSettings:FromEmail"];
             _fromName = _configuration["EmailSettings:FromName"];
-            _context = context;
         }
 
         public async Task SendEmailAsync(string to, string subject, string body)
         {
             try
             {
-                using var client = new SmtpClient(_smtpServer, _smtpPort)
-                {
-                    EnableSsl = true,
-                    Credentials = new NetworkCredential(_smtpUsername, _smtpPassword)
-                };
-
-                using var message = new MailMessage
-                {
-                    From = new MailAddress(_fromEmail, _fromName),
-                    Subject = subject,
-                    Body = body,
-                    IsBodyHtml = true
-                };
-                message.To.Add(to);
-
-                await client.SendMailAsync(message);
-                _logger.LogInformation($"Email sent successfully to {to}");
+                _logger.LogInformation($"[EMAIL NOT SENT - DISABLED] To: {to}, Subject: {subject}");
             }
             catch (Exception ex)
             {
@@ -64,54 +48,71 @@ namespace ClassroomSystem.Services
             }
         }
 
-        public async Task SendReservationApprovalEmailAsync(string toEmail, string userName, string classroomName, string dayOfWeek, string timeSlot)
+        public async Task SendReservationApprovalEmailAsync(string toEmail, string userId, string userName, string classroomName, string dayOfWeek, string timeSlot, int reservationId)
         {
             var subject = "Reservation Approved";
-            var body = $@"
-                <h2>Reservation Approved</h2>
-                <p>Dear {userName},</p>
-                <p>Your reservation request has been approved:</p>
-                <ul>
-                    <li>Classroom: {classroomName}</li>
-                    <li>Day: {dayOfWeek}</li>
-                    <li>Time: {timeSlot}</li>
-                </ul>
-                <p>Thank you for using our Classroom Reservation System.</p>";
+            var body = $"Dear {userName},\n\nYour reservation for {classroomName} on {dayOfWeek} at {timeSlot} has been approved.\n\nBest regards,\nClassroom System";
+
+            // Create notification
+            var notification = new Notification
+            {
+                UserId = userId,
+                Title = "Reservation Approved",
+                Message = $"Your reservation for {classroomName} on {dayOfWeek} at {timeSlot} has been approved.",
+                CreatedAt = DateTime.UtcNow,
+                IsRead = false,
+                Type = "ReservationApproval",
+                ReservationId = reservationId
+            };
+
+            _context.Notifications.Add(notification);
+            await _context.SaveChangesAsync();
 
             await SendEmailAsync(toEmail, subject, body);
         }
 
-        public async Task SendReservationRejectionEmailAsync(string toEmail, string userName, string classroomName, string dayOfWeek, string timeSlot, string reason)
+        public async Task SendReservationRejectionEmailAsync(string toEmail, string userId, string userName, string classroomName, string dayOfWeek, string timeSlot, string reason, int reservationId)
         {
             var subject = "Reservation Rejected";
-            var body = $@"
-                <h2>Reservation Rejected</h2>
-                <p>Dear {userName},</p>
-                <p>Your reservation request has been rejected:</p>
-                <ul>
-                    <li>Classroom: {classroomName}</li>
-                    <li>Day: {dayOfWeek}</li>
-                    <li>Time: {timeSlot}</li>
-                    <li>Reason: {reason}</li>
-                </ul>
-                <p>Please contact the administrator if you have any questions.</p>";
+            var body = $"Dear {userName},\n\nYour reservation for {classroomName} on {dayOfWeek} at {timeSlot} has been rejected.\n\nReason: {reason}\n\nBest regards,\nClassroom System";
+
+            // Create notification
+            var notification = new Notification
+            {
+                UserId = userId,
+                Title = "Reservation Rejected",
+                Message = $"Your reservation for {classroomName} on {dayOfWeek} at {timeSlot} has been rejected. Reason: {reason}",
+                CreatedAt = DateTime.UtcNow,
+                IsRead = false,
+                Type = "ReservationRejection",
+                ReservationId = reservationId
+            };
+
+            _context.Notifications.Add(notification);
+            await _context.SaveChangesAsync();
 
             await SendEmailAsync(toEmail, subject, body);
         }
 
-        public async Task SendHolidayWarningEmailAsync(string toEmail, string userName, string classroomName, string date, string timeSlot)
+        public async Task SendHolidayWarningEmailAsync(string toEmail, string userId, string userName, string classroomName, string date, int reservationId)
         {
             var subject = "Holiday Warning";
-            var body = $@"
-                <h2>Holiday Warning</h2>
-                <p>Dear {userName},</p>
-                <p>Your reservation falls on a public holiday:</p>
-                <ul>
-                    <li>Classroom: {classroomName}</li>
-                    <li>Date: {date}</li>
-                    <li>Time: {timeSlot}</li>
-                </ul>
-                <p>Please consider rescheduling your reservation.</p>";
+            var body = $"Dear {userName},\n\nYour reservation for {classroomName} on {date} falls on a holiday. Please consider rescheduling.\n\nBest regards,\nClassroom System";
+
+            // Create notification
+            var notification = new Notification
+            {
+                UserId = userId,
+                Title = "Holiday Warning",
+                Message = $"Your reservation for {classroomName} on {date} falls on a holiday. Please consider rescheduling.",
+                CreatedAt = DateTime.UtcNow,
+                IsRead = false,
+                Type = "Holiday",
+                ReservationId = reservationId
+            };
+
+            _context.Notifications.Add(notification);
+            await _context.SaveChangesAsync();
 
             await SendEmailAsync(toEmail, subject, body);
         }
@@ -164,34 +165,23 @@ namespace ClassroomSystem.Services
 
         public async Task SendReservationNotificationAsync(string toEmail, string classroomName, DateTime startTime, DateTime endTime, string purpose)
         {
-            var subject = "New Reservation Request";
-            var body = $@"
-                <h2>New Reservation Request</h2>
-                <p>A new reservation request has been submitted:</p>
-                <ul>
-                    <li>Classroom: {classroomName}</li>
-                    <li>Date: {startTime.ToShortDateString()}</li>
-                    <li>Time: {startTime.ToShortTimeString()} - {endTime.ToShortTimeString()}</li>
-                    <li>Purpose: {purpose}</li>
-                </ul>
-                <p>Please review and take appropriate action.</p>";
+            var subject = "New Reservation Created";
+            var body = $"A new reservation has been created for {classroomName} from {startTime:g} to {endTime:g}.\n\nPurpose: {purpose}\n\nBest regards,\nClassroom System";
 
             await SendEmailAsync(toEmail, subject, body);
         }
 
         public async Task SendFeedbackNotificationAsync(Feedback feedback)
         {
-            var user = await _context.Users.FindAsync(feedback.UserId);
-            if (user == null) return;
-
-            var emailBody = $@"
+            var subject = "New Feedback Received";
+            var body = $@"
                 <h2>New Feedback Received</h2>
-                <p>From: {user.FirstName} {user.LastName}</p>
-                <p>Classroom: {feedback.Classroom.Name}</p>
+                <p>From: {feedback.User?.FirstName} {feedback.User?.LastName}</p>
+                <p>Classroom: {feedback.Classroom?.Name}</p>
                 <p>Rating: {feedback.Rating}/5</p>
                 <p>Comment: {feedback.Comment}</p>";
 
-            await SendEmailAsync(_fromEmail, "New Feedback Received", emailBody);
+            await SendEmailAsync(_fromEmail, subject, body);
         }
     }
 } 

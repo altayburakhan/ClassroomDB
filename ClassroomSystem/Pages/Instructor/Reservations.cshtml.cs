@@ -8,6 +8,7 @@ using ClassroomSystem.Services;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace ClassroomSystem.Pages.Instructor
 {
@@ -119,26 +120,43 @@ namespace ClassroomSystem.Pages.Instructor
 
         public async Task<IActionResult> OnPostCancelAsync(int id)
         {
-            var userId = GetCurrentUserId();
-            var reservation = await _context.Reservations
-                .FirstOrDefaultAsync(r => r.Id == id && r.UserId == userId);
-
-            if (reservation == null)
+            try
             {
-                return NotFound();
-            }
+                var userId = GetCurrentUserId();
+                var reservation = await _context.Reservations
+                    .FirstOrDefaultAsync(r => r.Id == id && r.UserId == userId);
 
-            if (reservation.Status == ReservationStatus.Approved)
-            {
-                TempData["Error"] = "Cannot cancel an approved reservation.";
+                if (reservation == null)
+                {
+                    TempData["Error"] = "Reservation not found or you don't have permission to cancel it.";
+                    return RedirectToPage();
+                }
+
+                if (reservation.Status != ReservationStatus.Pending)
+                {
+                    TempData["Error"] = "Only pending reservations can be cancelled.";
+                    return RedirectToPage();
+                }
+
+                if (reservation.StartTime <= DateTime.Now)
+                {
+                    TempData["Error"] = "Cannot cancel past or ongoing reservations.";
+                    return RedirectToPage();
+                }
+
+                reservation.Status = ReservationStatus.Cancelled;
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Reservation {id} cancelled by user {userId}");
+                TempData["Success"] = "Reservation cancelled successfully.";
                 return RedirectToPage();
             }
-
-            _context.Reservations.Remove(reservation);
-            await _context.SaveChangesAsync();
-
-            TempData["Success"] = "Reservation cancelled successfully.";
-            return RedirectToPage();
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error cancelling reservation {id}");
+                TempData["Error"] = "An error occurred while cancelling the reservation.";
+                return RedirectToPage();
+            }
         }
     }
 } 

@@ -30,7 +30,25 @@
     {
         <div class="alert alert-info alert-dismissible fade show" role="alert">
             <i class="fas fa-calendar-alt me-2"></i>
-            Current Term: @Model.CurrentTerm.Name (@Model.CurrentTerm.StartDate.ToShortDateString() - @Model.CurrentTerm.EndDate.ToShortDateString())
+            <strong>Current Term:</strong> @Model.CurrentTerm.Name 
+            <span class="ms-2 text-muted">(@Model.CurrentTerm.StartDate.ToShortDateString() - @Model.CurrentTerm.EndDate.ToShortDateString())</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Warning:</strong> No active academic term found. A new term will be created automatically.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Info"] != null)
+    {
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            <i class="fas fa-info-circle me-2"></i>
+            @TempData["Info"]
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     }
@@ -77,62 +95,68 @@
             </div>
             <form method="post" asp-page-handler="AddReservation" id="reservationForm">
                 <div class="modal-body">
-                    <input type="hidden" id="reservationDate" name="date">
-                    <input type="hidden" id="reservationStartTime" name="startTime">
-                    <input type="hidden" id="reservationEndTime" name="endTime">
+                    @Html.AntiForgeryToken()
                     
+                    <!-- Date Selection -->
                     <div class="mb-3">
-                        <label class="form-label">Classroom</label>
-                        @if (Model.Classrooms == null || !Model.Classrooms.Any())
-                        {
-                            <div class="alert alert-warning">
-                                No classrooms available. Total classroom count: @(Model.Classrooms?.Count ?? 0)
-                            </div>
-                        }
-                        <select class="form-select" name="classroomId" required>
-                            <option value="">Select Classroom</option>
+                        <label class="form-label required">Date</label>
+                        <input type="date" class="form-control" name="date" id="reservationDate" required
+                               min="@DateTime.Today.ToString("yyyy-MM-dd")"
+                               value="@DateTime.Today.ToString("yyyy-MM-dd")">
+                        <div class="form-text">Select the date for your reservation</div>
+                    </div>
+
+                    <!-- Classroom Selection -->
+                    <div class="mb-3">
+                        <label class="form-label required">Classroom</label>
+                        <select class="form-select" name="classroomId" id="classroomSelect" required>
+                            <option value="">Select a classroom</option>
                             @if (Model.Classrooms != null)
                             {
                                 @foreach (var classroom in Model.Classrooms)
                                 {
-                                    <option value="@classroom.Id">@classroom.Name (Capacity: @classroom.Capacity, ID: @classroom.Id)</option>
+                                    <option value="@classroom.Id">
+                                        @classroom.Name (Capacity: @classroom.Capacity)
+                                    </option>
                                 }
                             }
                         </select>
+                        <div class="form-text">Choose the classroom you want to reserve</div>
                     </div>
 
+                    <!-- Time Selection -->
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label class="form-label">Start Time</label>
-                            <select class="form-select" name="startTime" required>
-                                @if (Model.TimeSlots != null)
-                                {
-                                    @foreach (var slot in Model.TimeSlots)
-                                    {
-                                        <option value="@slot.StartTime">@slot.StartTime.ToString(@"hh\:mm")</option>
-                                    }
-                                }
-                            </select>
+                            <label class="form-label required">Start Time</label>
+                            <input type="time" class="form-control" name="startTime" id="startTime" required
+                                   min="08:00" max="16:30" step="1800">
+                            <div class="form-text">Between 8:00 AM - 4:30 PM</div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">End Time</label>
-                            <select class="form-select" name="endTime" required>
-                                @if (Model.TimeSlots != null)
-                                {
-                                    @foreach (var slot in Model.TimeSlots)
-                                    {
-                                        <option value="@slot.EndTime">@slot.EndTime.ToString(@"hh\:mm")</option>
-                                    }
-                                }
-                            </select>
+                            <label class="form-label required">End Time</label>
+                            <input type="time" class="form-control" name="endTime" id="endTime" required
+                                   min="08:30" max="17:00" step="1800">
+                            <div class="form-text">Between 8:30 AM - 5:00 PM</div>
                         </div>
                     </div>
 
+                    <!-- Purpose -->
                     <div class="mb-3">
-                        <label class="form-label">Purpose</label>
-                        <textarea class="form-control" name="purpose" rows="3" required></textarea>
+                        <label class="form-label required">Purpose</label>
+                        <textarea class="form-control" name="purpose" id="purpose" rows="3" required
+                                  placeholder="Please describe the purpose of your reservation"></textarea>
+                        <div class="form-text">Briefly describe why you need the classroom</div>
                     </div>
 
+                    <!-- Notes -->
+                    <div class="mb-3">
+                        <label class="form-label">Additional Notes</label>
+                        <textarea class="form-control" name="notes" id="notes" rows="2"
+                                  placeholder="Any additional notes or requirements (optional)"></textarea>
+                        <div class="form-text">Optional notes for the reservation</div>
+                    </div>
+
+                    <!-- Weekly Repeat Option -->
                     <div class="mb-3">
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="repeatWeekly" name="repeatWeekly">
@@ -148,7 +172,9 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Submit Request</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> Submit Request
+                    </button>
                 </div>
             </form>
         </div>
@@ -248,17 +274,46 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+        .required::after {
+            content: " *";
+            color: red;
+        }
+        .form-text {
+            font-size: 0.875em;
+            color: #6c757d;
+        }
+        .modal-body {
+            padding: 1.5rem;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        .form-check-input:checked {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        #reservationForm .btn-primary {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        #reservationForm .btn-primary:hover {
+            background-color: #0b5ed7;
+            border-color: #0a58ca;
+        }
     </style>
 }
 
 @section Scripts {
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
     <script>
+        let calendar;
+
         document.addEventListener('DOMContentLoaded', function() {
             var calendarEl = document.getElementById('calendar');
-            var calendarEvents = @Html.Raw(Json.Serialize(Model?.CalendarEvents != null ? Model.CalendarEvents : new List<CalendarEvent>()));
+            var calendarEvents = @Html.Raw(Json.Serialize(Model.CalendarEvents));
             
-            var calendar = new FullCalendar.Calendar(calendarEl, {
+            calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'timeGridWeek',
                 headerToolbar: {
                     left: 'prev,next today',
@@ -272,71 +327,210 @@
                 events: calendarEvents,
                 eventClick: function(info) {
                     showEventDetails(info.event);
+                },
+                dateClick: function(info) {
+                    // Set the clicked date in the reservation form
+                    document.getElementById('reservationDate').value = info.dateStr;
+                    // Open the modal
+                    var modal = new bootstrap.Modal(document.getElementById('addReservationModal'));
+                    modal.show();
                 }
             });
             calendar.render();
 
-            // Event details modal
-            function showEventDetails(event) {
-                var modal = new bootstrap.Modal(document.getElementById('eventDetailsModal'));
-                var detailsContainer = document.getElementById('eventDetails');
-                var props = event.extendedProps;
+            // Set default times
+            document.getElementById('startTime').value = '08:00';
+            document.getElementById('endTime').value = '09:00';
 
-                var content = `
-                    <div class="event-details-item">
-                        <strong>Classroom:</strong> ${props.classroomName || 'N/A'}
-                    </div>
-                    <div class="event-details-item">
-                        <strong>Instructor:</strong> ${props.instructorName || 'N/A'}
-                    </div>
-                    <div class="event-details-item">
-                        <strong>Date:</strong> ${event.start.toLocaleDateString()}
-                    </div>
-                    <div class="event-details-item">
-                        <strong>Time:</strong> ${event.start.toLocaleTimeString()} - ${event.end.toLocaleTimeString()}
-                    </div>
-                    ${props.purpose ? `
-                    <div class="event-details-item">
-                        <strong>Purpose:</strong> ${props.purpose}
-                    </div>
-                    ` : ''}
-                    ${props.status ? `
-                    <div class="event-details-item">
-                        <strong>Status:</strong> <span class="badge bg-${getStatusColor(props.status)}">${props.status}</span>
-                    </div>
-                    ` : ''}
-                    ${props.isHoliday ? `
-                    <div class="event-details-item holiday-warning">
-                        <i class="fas fa-calendar-times"></i> This is a holiday: ${props.holidayName}
-                    </div>
-                    ` : ''}
-                `;
-
-                detailsContainer.innerHTML = content;
-                modal.show();
-            }
-
-            function getStatusColor(status) {
-                switch (status.toLowerCase()) {
-                    case 'approved': return 'success';
-                    case 'pending': return 'warning';
-                    case 'rejected': return 'danger';
-                    default: return 'secondary';
+            // Handle start time change
+            document.getElementById('startTime').addEventListener('change', function() {
+                var startTime = this.value;
+                var endTimeInput = document.getElementById('endTime');
+                var startHour = parseInt(startTime.split(':')[0]);
+                var startMinute = parseInt(startTime.split(':')[1]);
+                
+                // Set minimum end time to 30 minutes after start time
+                var minEndHour = startHour;
+                var minEndMinute = startMinute + 30;
+                if (minEndMinute >= 60) {
+                    minEndHour++;
+                    minEndMinute -= 60;
                 }
+                
+                var minEndTime = `${minEndHour.toString().padStart(2, '0')}:${minEndMinute.toString().padStart(2, '0')}`;
+                endTimeInput.min = minEndTime;
+                
+                // If current end time is before new minimum, update it
+                if (endTimeInput.value < minEndTime) {
+                    endTimeInput.value = minEndTime;
+                }
+            });
+
+            // Form validation and submission
+            document.getElementById('reservationForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Basic validation
+                var startTime = document.getElementById('startTime').value;
+                var endTime = document.getElementById('endTime').value;
+                var date = document.getElementById('reservationDate').value;
+                var classroom = document.getElementById('classroomSelect').value;
+                var purpose = document.getElementById('purpose').value;
+
+                if (!startTime || !endTime || !date || !classroom || !purpose.trim()) {
+                    showAlert('danger', 'Please fill in all required fields.');
+                    return;
+                }
+
+                // Show loading state
+                const submitButton = this.querySelector('button[type="submit"]');
+                const originalText = submitButton.innerHTML;
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+
+                // Submit form via AJAX
+                const formData = new FormData(this);
+                
+                fetch('?handler=AddReservation', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Add new event to calendar
+                        calendar.addEvent({
+                            id: data.reservation.id,
+                            title: data.reservation.title,
+                            start: data.reservation.start,
+                            end: data.reservation.end,
+                            className: data.reservation.className,
+                            extendedProps: {
+                                ...data.reservation.extendedProps,
+                                notes: formData.get('notes')
+                            }
+                        });
+                        
+                        // Close modal and show success message
+                        var modal = bootstrap.Modal.getInstance(document.getElementById('addReservationModal'));
+                        modal.hide();
+                        
+                        showAlert('success', 'Reservation request submitted successfully!');
+                        
+                        // Reset form
+                        this.reset();
+                        document.getElementById('startTime').value = '08:00';
+                        document.getElementById('endTime').value = '09:00';
+                    } else {
+                        showAlert('danger', data.message || 'Failed to add reservation.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert('danger', 'An error occurred while submitting the reservation.');
+                })
+                .finally(() => {
+                    // Restore button state
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalText;
+                });
+            });
+        });
+
+        function showAlert(type, message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            // Remove any existing alerts
+            document.querySelectorAll('.alert').forEach(alert => alert.remove());
+            
+            // Add new alert at the top of the container
+            const container = document.querySelector('.container-fluid');
+            container.insertBefore(alertDiv, container.firstChild);
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+
+        function showEventDetails(event) {
+            var modal = new bootstrap.Modal(document.getElementById('eventDetailsModal'));
+            var detailsContainer = document.getElementById('eventDetails');
+            var props = event.extendedProps;
+
+            var content = `
+                <div class="event-details-item">
+                    <strong>Classroom:</strong> ${props.classroomName || 'N/A'}
+                </div>
+                <div class="event-details-item">
+                    <strong>Instructor:</strong> ${props.instructorName || 'N/A'}
+                </div>
+                <div class="event-details-item">
+                    <strong>Date:</strong> ${event.start.toLocaleDateString()}
+                </div>
+                <div class="event-details-item">
+                    <strong>Time:</strong> ${event.start.toLocaleTimeString()} - ${event.end.toLocaleTimeString()}
+                </div>
+                ${props.purpose ? `
+                <div class="event-details-item">
+                    <strong>Purpose:</strong> ${props.purpose}
+                </div>
+                ` : ''}
+                ${props.notes ? `
+                <div class="event-details-item">
+                    <strong>Notes:</strong> ${props.notes}
+                </div>
+                ` : ''}
+                ${props.status ? `
+                <div class="event-details-item">
+                    <strong>Status:</strong> <span class="badge bg-${getStatusColor(props.status)}">${props.status}</span>
+                </div>
+                ` : ''}
+                ${props.isHoliday ? `
+                <div class="event-details-item holiday-warning">
+                    <i class="fas fa-calendar-times"></i> This is a holiday: ${props.holidayName}
+                </div>
+                ` : ''}
+            `;
+
+            detailsContainer.innerHTML = content;
+            modal.show();
+        }
+
+        function getStatusColor(status) {
+            switch (status.toLowerCase()) {
+                case 'approved': return 'success';
+                case 'pending': return 'warning';
+                case 'rejected': return 'danger';
+                default: return 'secondary';
             }
+        }
 
-            // Navigation buttons
-            document.getElementById('prevWeek').addEventListener('click', function() {
-                calendar.prev();
-            });
+        // Navigation buttons
+        document.getElementById('prevWeek').addEventListener('click', function() {
+            calendar.prev();
+        });
 
-            document.getElementById('nextWeek').addEventListener('click', function() {
-                calendar.next();
-            });
+        document.getElementById('nextWeek').addEventListener('click', function() {
+            calendar.next();
+        });
 
-            document.getElementById('today').addEventListener('click', function() {
-                calendar.today();
-            });
+        document.getElementById('today').addEventListener('click', function() {
+            calendar.today();
         });
     </script>
 } 

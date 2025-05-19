@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using System.Text.Json.Serialization;
+using System.Text.Json;
 
 namespace ClassroomSystem.Pages.Instructor
 {
@@ -36,31 +37,71 @@ namespace ClassroomSystem.Pages.Instructor
 
         public Term CurrentTerm { get; set; }
         public List<Classroom> Classrooms { get; set; }
-        public List<CalendarEvent> CalendarEvents { get; set; }
+        public List<CalendarEvent> CalendarEvents { get; set; } = new List<CalendarEvent>();
         public List<TimeSlot> TimeSlots { get; set; }
+
+        private async Task<Term> EnsureActiveTermExistsAsync()
+        {
+            try
+            {
+                _logger.LogInformation("Checking for active term...");
+                
+                var term = await _context.Terms
+                    .FirstOrDefaultAsync(t => t.StartDate <= DateTime.Today && t.EndDate >= DateTime.Today && t.IsActive);
+
+                if (term != null)
+                {
+                    _logger.LogInformation($"Found active term: {term.Name} ({term.StartDate:d} - {term.EndDate:d})");
+                    return term;
+                }
+
+                _logger.LogWarning("No active term found. Creating a new term...");
+                
+                // Create a new academic term for the current semester
+                var today = DateTime.Today;
+                var termStart = new DateTime(today.Year, today.Month, 1);
+                var termEnd = termStart.AddMonths(4).AddDays(-1);
+                var termName = $"{today.Year} {(today.Month <= 6 ? "Spring" : "Fall")} Term";
+
+                var newTerm = new Term
+                {
+                    Name = termName,
+                    StartDate = termStart,
+                    EndDate = termEnd,
+                    IsActive = true,
+                    Description = "Automatically created term"
+                };
+
+                _logger.LogInformation($"Creating new term: {JsonSerializer.Serialize(newTerm)}");
+
+                _context.Terms.Add(newTerm);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Successfully created new term with ID: {newTerm.Id}");
+                TempData["Info"] = $"Created new academic term: {newTerm.Name}";
+
+                return newTerm;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to create or retrieve active term");
+                throw; // Re-throw to be handled by the caller
+            }
+        }
 
         public async Task<IActionResult> OnGetAsync(string start = null, string end = null)
         {
             try
             {
-                // Get current term
-                CurrentTerm = await _context.Terms
-                    .FirstOrDefaultAsync(t => t.StartDate <= DateTime.Today && t.EndDate >= DateTime.Today);
-
-                if (CurrentTerm == null)
+                // Get or create current term
+                try
                 {
-                    _logger.LogWarning("No active term found. Creating a default term...");
-                    CurrentTerm = new Term
-                    {
-                        Name = "Current Term",
-                        StartDate = DateTime.Today,
-                        EndDate = DateTime.Today.AddMonths(4),
-                        IsActive = true,
-                        Description = "Automatically created term"
-                    };
-                    _context.Terms.Add(CurrentTerm);
-                    await _context.SaveChangesAsync();
-                    _logger.LogInformation($"Created default term: {CurrentTerm.Name} ({CurrentTerm.StartDate:d} - {CurrentTerm.EndDate:d})");
+                    CurrentTerm = await EnsureActiveTermExistsAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to ensure active term exists");
+                    TempData["Error"] = "Failed to create academic term. Please contact an administrator.";
                 }
 
                 // Get active classrooms
@@ -177,74 +218,145 @@ namespace ClassroomSystem.Pages.Instructor
         public async Task<IActionResult> OnPostAddReservationAsync(
             int classroomId,
             DateTime date,
-            TimeSpan startTime,
-            TimeSpan endTime,
-            string purpose)
+            string startTime,
+            string endTime,
+            string purpose,
+            string notes)
         {
             try
             {
+                _logger.LogInformation($"Starting reservation process: ClassroomId={classroomId}, Date={date}, StartTime={startTime}, EndTime={endTime}, Purpose={purpose}");
+
+                // Get or create current term first
+                try
+                {
+                    CurrentTerm = await EnsureActiveTermExistsAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to ensure active term exists during reservation");
+                    return new JsonResult(new { success = false, message = "Failed to create academic term. Please try again or contact an administrator." });
+                }
+
                 if (!ModelState.IsValid)
                 {
-                    return Page();
+                    var errors = string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+                    _logger.LogWarning($"ModelState is invalid: {errors}");
+                    return new JsonResult(new { success = false, message = "Invalid form data" });
+                }
+
+                // Parse time values
+                if (!TimeSpan.TryParse(startTime, out TimeSpan startTimeSpan))
+                {
+                    _logger.LogWarning($"Invalid start time format: {startTime}");
+                    return new JsonResult(new { success = false, message = "Invalid start time format" });
+                }
+
+                if (!TimeSpan.TryParse(endTime, out TimeSpan endTimeSpan))
+                {
+                    _logger.LogWarning($"Invalid end time format: {endTime}");
+                    return new JsonResult(new { success = false, message = "Invalid end time format" });
                 }
 
                 // Validate date and time
                 if (date.Date < DateTime.Today)
                 {
-                    ModelState.AddModelError("", "Cannot make reservations for past dates");
-                    return Page();
+                    _logger.LogWarning($"Past date selected: {date}");
+                    return new JsonResult(new { success = false, message = "Cannot make reservations for past dates" });
                 }
 
-                if (startTime >= endTime)
+                if (startTimeSpan >= endTimeSpan)
                 {
-                    ModelState.AddModelError("", "End time must be after start time");
-                    return Page();
+                    _logger.LogWarning($"Invalid time range: {startTime} - {endTime}");
+                    return new JsonResult(new { success = false, message = "End time must be after start time" });
+                }
+
+                // Validate business hours
+                var minTime = TimeSpan.FromHours(8); // 8:00 AM
+                var maxTime = TimeSpan.FromHours(17); // 5:00 PM
+                if (startTimeSpan < minTime || endTimeSpan > maxTime)
+                {
+                    _logger.LogWarning($"Outside business hours: {startTime} - {endTime}");
+                    return new JsonResult(new { success = false, message = "Reservations are only allowed between 8:00 AM and 5:00 PM" });
                 }
 
                 // Check if classroom is available
+                var reservationStart = date.Date.Add(startTimeSpan);
+                var reservationEnd = date.Date.Add(endTimeSpan);
+
+                _logger.LogInformation($"Checking availability for classroom {classroomId} at {reservationStart} - {reservationEnd}");
+
                 var isAvailable = await _context.Reservations
                     .Where(r => r.ClassroomId == classroomId && 
                                r.StartTime.Date == date.Date && 
                                r.Status != ReservationStatus.Cancelled)
-                    .AllAsync(r => endTime <= r.StartTime.TimeOfDay || startTime >= r.EndTime.TimeOfDay);
+                    .AllAsync(r => reservationEnd <= r.StartTime || reservationStart >= r.EndTime);
 
                 if (!isAvailable)
                 {
-                    ModelState.AddModelError("", "Classroom is not available at the selected time");
-                    return Page();
+                    _logger.LogWarning($"Classroom {classroomId} is not available at {reservationStart} - {reservationEnd}");
+                    return new JsonResult(new { success = false, message = "Classroom is not available at the selected time" });
                 }
 
                 // Check if date is a holiday
                 var holidays = await _holidayService.GetHolidaysAsync(date, date);
                 if (holidays.Any())
                 {
-                    ModelState.AddModelError("", "Cannot make reservations on holidays");
-                    return Page();
+                    _logger.LogWarning($"Attempted reservation on holiday: {date}");
+                    return new JsonResult(new { success = false, message = "Cannot make reservations on holidays" });
                 }
 
                 var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(userId))
                 {
-                    ModelState.AddModelError("", "User not found");
-                    return Page();
+                    _logger.LogWarning("User ID not found in claims");
+                    return new JsonResult(new { success = false, message = "User not found" });
+                }
+
+                var classroom = await _context.Classrooms.FindAsync(classroomId);
+                if (classroom == null)
+                {
+                    _logger.LogWarning($"Classroom not found: {classroomId}");
+                    return new JsonResult(new { success = false, message = "Classroom not found" });
+                }
+
+                var user = await _context.Users.FindAsync(userId);
+                if (user == null)
+                {
+                    _logger.LogWarning($"User not found: {userId}");
+                    return new JsonResult(new { success = false, message = "User details not found" });
+                }
+
+                // Check if we have an active term
+                if (CurrentTerm == null)
+                {
+                    _logger.LogWarning("No active term found");
+                    return new JsonResult(new { success = false, message = "No active term found. Please contact an administrator." });
                 }
 
                 var newReservation = new Reservation
                 {
                     ClassroomId = classroomId,
                     UserId = userId,
-                    StartTime = date.Date.Add(startTime),
-                    EndTime = date.Date.Add(endTime),
+                    StartTime = reservationStart,
+                    EndTime = reservationEnd,
                     Purpose = purpose,
-                    Status = ReservationStatus.Pending
+                    Notes = notes ?? "No additional notes",
+                    Status = ReservationStatus.Pending,
+                    TermId = CurrentTerm.Id,
+                    IsRecurring = false,
+                    RecurrencePattern = "None",
+                    RejectionReason = string.Empty
                 };
+
+                _logger.LogInformation($"Adding new reservation: {JsonSerializer.Serialize(newReservation)}");
 
                 _context.Reservations.Add(newReservation);
                 await _context.SaveChangesAsync();
 
+                _logger.LogInformation($"Successfully created reservation with ID: {newReservation.Id}");
+
                 // Send email notification
-                var classroom = await _context.Classrooms.FindAsync(classroomId);
-                var user = await _context.Users.FindAsync(userId);
                 if (classroom != null && user != null)
                 {
                     await _emailService.SendReservationNotificationAsync(
@@ -255,13 +367,37 @@ namespace ClassroomSystem.Pages.Instructor
                         newReservation.Purpose);
                 }
 
-                return RedirectToPage();
+                // Create calendar event object
+                var calendarEvent = new CalendarEvent
+                {
+                    Id = newReservation.Id.ToString(),
+                    Title = $"{classroom.Name} - {user.FirstName} {user.LastName}",
+                    Start = newReservation.StartTime,
+                    End = newReservation.EndTime,
+                    ClassName = "event-pending",
+                    AllDay = false,
+                    ExtendedProps = new Dictionary<string, object>
+                    {
+                        { "classroomId", classroom.Id },
+                        { "classroomName", classroom.Name },
+                        { "instructorId", user.Id },
+                        { "instructorName", $"{user.FirstName} {user.LastName}" },
+                        { "purpose", purpose },
+                        { "status", "Pending" },
+                        { "notes", notes }
+                    }
+                };
+
+                return new JsonResult(new { success = true, reservation = calendarEvent });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error adding reservation");
-                TempData["Error"] = "An error occurred while adding the reservation.";
-                return Page();
+                return new JsonResult(new { 
+                    success = false, 
+                    message = "An error occurred while adding the reservation.",
+                    error = ex.Message  // Include the actual error message for debugging
+                });
             }
         }
 

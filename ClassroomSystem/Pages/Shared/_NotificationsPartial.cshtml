@@ -1,0 +1,59 @@
+@using ClassroomSystem.Models
+@using Microsoft.AspNetCore.Identity
+@using ClassroomSystem.Data
+@using Microsoft.EntityFrameworkCore
+@inject UserManager<ApplicationUser> UserManager
+@inject ApplicationDbContext Context
+
+@{
+    var user = await UserManager.GetUserAsync(User);
+    if (user != null)
+    {
+        var notifications = await Context.Notifications
+            .Where(n => n.UserId == user.Id && !n.IsRead)
+            .OrderByDescending(n => n.CreatedAt)
+            .Take(5)
+            .ToListAsync();
+
+        <div class="dropdown">
+            <button class="btn btn-link nav-link text-dark position-relative" type="button" id="notificationsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-bell"></i>
+                @if (notifications.Any())
+                {
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        @notifications.Count
+                    </span>
+                }
+            </button>
+            <div class="dropdown-menu dropdown-menu-end p-0" aria-labelledby="notificationsDropdown" style="width: 300px;">
+                <div class="list-group list-group-flush">
+                    @if (!notifications.Any())
+                    {
+                        <div class="list-group-item text-center text-muted">
+                            No new notifications
+                        </div>
+                    }
+                    else
+                    {
+                        foreach (var notification in notifications)
+                        {
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">@notification.Title</h6>
+                                    <small class="text-muted">@notification.CreatedAt.ToLocalTime().ToString("g")</small>
+                                </div>
+                                <p class="mb-1">@notification.Message</p>
+                                <form method="post" asp-page-handler="MarkNotificationAsRead" asp-route-id="@notification.Id" class="d-inline">
+                                    <button type="submit" class="btn btn-link btn-sm text-muted p-0">Mark as read</button>
+                                </form>
+                            </div>
+                        }
+                        <div class="list-group-item text-center">
+                            <a href="/Notifications" class="text-decoration-none">View all notifications</a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+} 
