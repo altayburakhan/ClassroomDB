@@ -54,10 +54,23 @@ namespace ClassroomSystem.Pages.Instructor
                 }
 
                 // Get active classrooms
+                _logger.LogInformation("Starting to fetch classrooms...");
+                
                 Classrooms = await _context.Classrooms
-                    .Where(c => c.IsActive)
                     .OrderBy(c => c.Name)
                     .ToListAsync();
+
+                _logger.LogInformation($"Found {Classrooms.Count} classrooms in database");
+                foreach (var classroom in Classrooms)
+                {
+                    _logger.LogInformation($"Classroom: {classroom.Name}, IsAvailable: {classroom.IsAvailable}, IsActive: {classroom.IsActive}, Capacity: {classroom.Capacity}, Id: {classroom.Id}");
+                }
+
+                if (Classrooms == null || !Classrooms.Any())
+                {
+                    _logger.LogWarning("No classrooms found in the database!");
+                    TempData["Warning"] = "No classrooms are available for reservation.";
+                }
 
                 // Generate time slots
                 TimeSlots = new List<TimeSlot>();
@@ -240,6 +253,21 @@ namespace ClassroomSystem.Pages.Instructor
                 TempData["Error"] = "An error occurred while adding the reservation.";
                 return Page();
             }
+        }
+
+        public async Task<IActionResult> OnGetDebugAsync()
+        {
+            var classrooms = await _context.Classrooms.ToListAsync();
+            var result = classrooms.Select(c => new
+            {
+                c.Id,
+                c.Name,
+                c.IsAvailable,
+                c.IsActive,
+                c.Capacity
+            }).ToList();
+
+            return new JsonResult(result);
         }
     }
 

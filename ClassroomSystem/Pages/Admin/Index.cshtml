@@ -24,10 +24,10 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="text-muted text-uppercase fw-semibold mt-0 mb-2">Total Users</h6>
-                        <h3 class="mb-2">@Model.TotalUsers</h3>
+                        <h3 class="mb-2">@(Model?.TotalUsers ?? 0)</h3>
                         <p class="mb-0 text-muted">
                             <span class="text-success me-2">
-                                <i class="mdi mdi-arrow-up-bold"></i> @Model.NewUsersThisWeek
+                                <i class="mdi mdi-arrow-up-bold"></i> @(Model?.NewUsersThisWeek ?? 0)
                             </span>
                             <span class="text-nowrap">Since last week</span>
                         </p>
@@ -48,10 +48,10 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="text-muted text-uppercase fw-semibold mt-0 mb-2">Total Classrooms</h6>
-                        <h3 class="mb-2">@Model.TotalClassrooms</h3>
+                        <h3 class="mb-2">@(Model?.TotalClassrooms ?? 0)</h3>
                         <p class="mb-0 text-muted">
                             <span class="text-success me-2">
-                                <i class="mdi mdi-arrow-up-bold"></i> @Model.AvailableClassrooms
+                                <i class="mdi mdi-arrow-up-bold"></i> @(Model?.AvailableClassrooms ?? 0)
                             </span>
                             <span class="text-nowrap">Available now</span>
                         </p>
@@ -72,10 +72,10 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="text-muted text-uppercase fw-semibold mt-0 mb-2">Total Reservations</h6>
-                        <h3 class="mb-2">@Model.TotalReservations</h3>
+                        <h3 class="mb-2">@(Model?.TotalReservations ?? 0)</h3>
                         <p class="mb-0 text-muted">
                             <span class="text-warning me-2">
-                                <i class="mdi mdi-arrow-up-bold"></i> @Model.PendingReservations
+                                <i class="mdi mdi-arrow-up-bold"></i> @(Model?.PendingReservations ?? 0)
                             </span>
                             <span class="text-nowrap">Pending approval</span>
                         </p>
@@ -96,10 +96,10 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="text-muted text-uppercase fw-semibold mt-0 mb-2">Active Terms</h6>
-                        <h3 class="mb-2">@Model.ActiveTerms</h3>
+                        <h3 class="mb-2">@(Model?.ActiveTerms ?? 0)</h3>
                         <p class="mb-0 text-muted">
                             <span class="text-success me-2">
-                                <i class="mdi mdi-arrow-up-bold"></i> @Model.UpcomingTerms
+                                <i class="mdi mdi-arrow-up-bold"></i> @(Model?.UpcomingTerms ?? 0)
                             </span>
                             <span class="text-nowrap">Upcoming terms</span>
                         </p>
@@ -143,18 +143,21 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var reservation in Model.WeeklySchedule)
+                            @if (Model?.WeeklySchedule != null)
                             {
-                                <tr>
-                                    <td>@reservation.ClassroomName</td>
-                                    <td>@reservation.InstructorName</td>
-                                    <td>@reservation.StartTime.ToString("HH:mm") - @reservation.EndTime.ToString("HH:mm")</td>
-                                    <td>
-                                        <span class="badge bg-@(reservation.Status == ReservationStatus.Approved ? "success" : "warning")">
-                                            @reservation.Status
-                                        </span>
-                                    </td>
-                                </tr>
+                                @foreach (var reservation in Model.WeeklySchedule)
+                                {
+                                    <tr>
+                                        <td>@reservation.ClassroomName</td>
+                                        <td>@reservation.InstructorName</td>
+                                        <td>@reservation.StartTime.ToString("HH:mm") - @reservation.EndTime.ToString("HH:mm")</td>
+                                        <td>
+                                            <span class="badge bg-@(reservation.Status == ReservationStatus.Approved ? "success" : "warning")">
+                                                @reservation.Status
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
                             }
                         </tbody>
                     </table>
@@ -173,22 +176,25 @@
             </div>
             <div class="card-body">
                 <div class="inbox-widget">
-                    @foreach (var feedback in Model.RecentFeedback)
+                    @if (Model?.RecentFeedback != null)
                     {
-                        <div class="inbox-item d-flex align-items-center py-3 border-bottom">
-                            <div class="inbox-item-img me-3">
-                                <img src="~/images/users/default-avatar.png" class="rounded-circle" alt="" width="40">
+                        @foreach (var feedback in Model.RecentFeedback)
+                        {
+                            <div class="inbox-item d-flex align-items-center py-3 border-bottom">
+                                <div class="inbox-item-img me-3">
+                                    <img src="~/images/users/default-avatar.png" class="rounded-circle" alt="" width="40">
+                                </div>
+                                <div class="inbox-item-content flex-grow-1">
+                                    <h5 class="inbox-item-author mt-0 mb-1">@feedback.InstructorName</h5>
+                                    <p class="inbox-item-text text-muted mb-0">@feedback.ClassroomName</p>
+                                </div>
+                                <div class="inbox-item-date">
+                                    <span class="badge bg-@(feedback.Rating >= 4 ? "success" : feedback.Rating >= 3 ? "warning" : "danger")">
+                                        @feedback.Rating <i class="mdi mdi-star"></i>
+                                    </span>
+                                </div>
                             </div>
-                            <div class="inbox-item-content flex-grow-1">
-                                <h5 class="inbox-item-author mt-0 mb-1">@feedback.InstructorName</h5>
-                                <p class="inbox-item-text text-muted mb-0">@feedback.ClassroomName</p>
-                            </div>
-                            <div class="inbox-item-date">
-                                <span class="badge bg-@(feedback.Rating >= 4 ? "success" : feedback.Rating >= 3 ? "warning" : "danger")">
-                                    @feedback.Rating <i class="mdi mdi-star"></i>
-                                </span>
-                            </div>
-                        </div>
+                        }
                     }
                 </div>
             </div>

@@ -1,0 +1,31 @@
+@page
+@model ClassroomSystem.Pages.Account.LogoutModel
+@{
+    ViewData["Title"] = "Logout";
+    Layout = "_LoginLayout";
+}
+
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-6 text-center">
+            <div class="card shadow">
+                <div class="card-body">
+                    <i class="fas fa-sign-out-alt text-primary fa-4x mb-3"></i>
+                    <h2 class="card-title">Logging Out</h2>
+                    <p class="card-text">Please wait while we sign you out...</p>
+                    <form method="post" id="logoutForm">
+                        <button type="submit" class="btn btn-primary d-none">Logout</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('logoutForm').submit();
+        });
+    </script>
+} 

@@ -1,8 +1,10 @@
 @page
+@using System.Linq
+@using ClassroomSystem.Models
 @model ClassroomSystem.Pages.Instructor.CalendarModel
 @{
     ViewData["Title"] = "Classroom Calendar";
-    Layout = "Instructor/_Layout";
+    Layout = "_Layout";
 }
 
 <div class="container-fluid">
@@ -23,6 +25,15 @@
             </button>
         </div>
     </div>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
 
     @if (TempData["Warning"] != null)
     {
@@ -63,11 +74,20 @@
                     
                     <div class="mb-3">
                         <label class="form-label">Classroom</label>
+                        @if (Model.Classrooms == null || !Model.Classrooms.Any())
+                        {
+                            <div class="alert alert-warning">
+                                No classrooms available. Total classroom count: @(Model.Classrooms?.Count ?? 0)
+                            </div>
+                        }
                         <select class="form-select" name="classroomId" required>
                             <option value="">Select Classroom</option>
-                            @foreach (var classroom in Model.Classrooms)
+                            @if (Model.Classrooms != null)
                             {
-                                <option value="@classroom.Id">@classroom.Name (Capacity: @classroom.Capacity)</option>
+                                @foreach (var classroom in Model.Classrooms)
+                                {
+                                    <option value="@classroom.Id">@classroom.Name (Capacity: @classroom.Capacity, ID: @classroom.Id)</option>
+                                }
                             }
                         </select>
                     </div>
@@ -76,18 +96,24 @@
                         <div class="col-md-6">
                             <label class="form-label">Start Time</label>
                             <select class="form-select" name="startTime" required>
-                                @foreach (var slot in Model.TimeSlots)
+                                @if (Model.TimeSlots != null)
                                 {
-                                    <option value="@slot.StartTime">@slot.StartTime.ToString(@"hh\:mm")</option>
+                                    @foreach (var slot in Model.TimeSlots)
+                                    {
+                                        <option value="@slot.StartTime">@slot.StartTime.ToString(@"hh\:mm")</option>
+                                    }
                                 }
                             </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">End Time</label>
                             <select class="form-select" name="endTime" required>
-                                @foreach (var slot in Model.TimeSlots)
+                                @if (Model.TimeSlots != null)
                                 {
-                                    <option value="@slot.EndTime">@slot.EndTime.ToString(@"hh\:mm")</option>
+                                    @foreach (var slot in Model.TimeSlots)
+                                    {
+                                        <option value="@slot.EndTime">@slot.EndTime.ToString(@"hh\:mm")</option>
+                                    }
                                 }
                             </select>
                         </div>
@@ -221,6 +247,8 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             var calendarEl = document.getElementById('calendar');
+            var calendarEvents = @Html.Raw(Json.Serialize(Model?.CalendarEvents != null ? Model.CalendarEvents : new List<CalendarEvent>()));
+            
             var calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'timeGridWeek',
                 headerToolbar: {
@@ -230,108 +258,27 @@
                 },
                 slotMinTime: '08:00:00',
                 slotMaxTime: '17:00:00',
-                slotDuration: '01:30:00',
                 allDaySlot: false,
-                weekends: false,
-                timeZone: 'local',
-                events: @Html.Raw(Json.Serialize(Model.CalendarEvents)),
+                slotDuration: '00:30:00',
+                events: calendarEvents,
                 eventClick: function(info) {
                     showEventDetails(info.event);
-                },
-                dateClick: function(info) {
-                    if (info.date >= new Date().setHours(0,0,0,0)) {
-                        showReservationModal(
-                            info.dateStr,
-                            '08:00:00',
-                            '09:30:00'
-                        );
-                    }
-                },
-                eventDidMount: function(info) {
-                    // Add tooltips
-                    if (info.event.extendedProps.hasConflict) {
-                        info.el.title = 'This reservation has a conflict';
-                    }
-                    if (info.event.extendedProps.isHoliday) {
-                        info.el.title = 'Holiday: ' + info.event.title;
-                    }
                 }
             });
             calendar.render();
 
-            // Handle week navigation
-            document.getElementById('prevWeek').addEventListener('click', function() {
-                calendar.prev();
-            });
-            document.getElementById('nextWeek').addEventListener('click', function() {
-                calendar.next();
-            });
-            document.getElementById('today').addEventListener('click', function() {
-                calendar.today();
-            });
-
-            // Reservation form validation
-            const reservationForm = document.getElementById('reservationForm');
-            const startTimeSelect = reservationForm.querySelector('select[name="startTime"]');
-            const endTimeSelect = reservationForm.querySelector('select[name="endTime"]');
-            const warningsDiv = document.getElementById('reservationWarnings');
-
-            function validateTimeSlots() {
-                const startTime = new Date('1970-01-01T' + startTimeSelect.value);
-                const endTime = new Date('1970-01-01T' + endTimeSelect.value);
-                
-                if (endTime <= startTime) {
-                    warningsDiv.textContent = 'End time must be after start time';
-                    warningsDiv.classList.remove('d-none');
-                    return false;
-                }
-
-                const duration = (endTime - startTime) / (1000 * 60 * 60);
-                if (duration < 1.5) {
-                    warningsDiv.textContent = 'Reservation must be at least 1.5 hours';
-                    warningsDiv.classList.remove('d-none');
-                    return false;
-                }
-
-                warningsDiv.classList.add('d-none');
-                return true;
-            }
-
-            startTimeSelect.addEventListener('change', validateTimeSlots);
-            endTimeSelect.addEventListener('change', validateTimeSlots);
-
-            reservationForm.addEventListener('submit', function(e) {
-                if (!validateTimeSlots()) {
-                    e.preventDefault();
-                }
-            });
-
-            function showReservationModal(date, startTime, endTime) {
-                document.getElementById('reservationDate').value = date;
-                document.getElementById('reservationStartTime').value = startTime;
-                document.getElementById('reservationEndTime').value = endTime;
-                
-                // Reset form
-                reservationForm.reset();
-                warningsDiv.classList.add('d-none');
-                
-                // Set initial time values
-                startTimeSelect.value = startTime;
-                endTimeSelect.value = endTime;
-                
-                new bootstrap.Modal(document.getElementById('addReservationModal')).show();
-            }
-
+            // Event details modal
             function showEventDetails(event) {
-                const details = document.getElementById('eventDetails');
-                const props = event.extendedProps;
-                
-                let html = `
+                var modal = new bootstrap.Modal(document.getElementById('eventDetailsModal'));
+                var detailsContainer = document.getElementById('eventDetails');
+                var props = event.extendedProps;
+
+                var content = `
                     <div class="event-details-item">
-                        <strong>Classroom:</strong> ${event.title.split(' - ')[0]}
+                        <strong>Classroom:</strong> ${props.classroomName || 'N/A'}
                     </div>
                     <div class="event-details-item">
-                        <strong>Instructor:</strong> ${event.title.split(' - ')[1]}
+                        <strong>Instructor:</strong> ${props.instructorName || 'N/A'}
                     </div>
                     <div class="event-details-item">
                         <strong>Date:</strong> ${event.start.toLocaleDateString()}
@@ -339,38 +286,48 @@
                     <div class="event-details-item">
                         <strong>Time:</strong> ${event.start.toLocaleTimeString()} - ${event.end.toLocaleTimeString()}
                     </div>
+                    ${props.purpose ? `
                     <div class="event-details-item">
-                        <strong>Status:</strong> ${props.status}
+                        <strong>Purpose:</strong> ${props.purpose}
                     </div>
+                    ` : ''}
+                    ${props.status ? `
+                    <div class="event-details-item">
+                        <strong>Status:</strong> <span class="badge bg-${getStatusColor(props.status)}">${props.status}</span>
+                    </div>
+                    ` : ''}
+                    ${props.isHoliday ? `
+                    <div class="event-details-item holiday-warning">
+                        <i class="fas fa-calendar-times"></i> This is a holiday: ${props.holidayName}
+                    </div>
+                    ` : ''}
                 `;
 
-                if (props.purpose) {
-                    html += `
-                        <div class="event-details-item">
-                            <strong>Purpose:</strong> ${props.purpose}
-                        </div>
-                    `;
-                }
-
-                if (props.hasConflict) {
-                    html += `
-                        <div class="event-details-item conflict-warning">
-                            <i class="fas fa-exclamation-triangle"></i> This reservation has a conflict
-                        </div>
-                    `;
-                }
-
-                if (props.isHoliday) {
-                    html += `
-                        <div class="event-details-item holiday-warning">
-                            <i class="fas fa-calendar"></i> This is a holiday
-                        </div>
-                    `;
-                }
-
-                details.innerHTML = html;
-                new bootstrap.Modal(document.getElementById('eventDetailsModal')).show();
+                detailsContainer.innerHTML = content;
+                modal.show();
             }
+
+            function getStatusColor(status) {
+                switch (status.toLowerCase()) {
+                    case 'approved': return 'success';
+                    case 'pending': return 'warning';
+                    case 'rejected': return 'danger';
+                    default: return 'secondary';
+                }
+            }
+
+            // Navigation buttons
+            document.getElementById('prevWeek').addEventListener('click', function() {
+                calendar.prev();
+            });
+
+            document.getElementById('nextWeek').addEventListener('click', function() {
+                calendar.next();
+            });
+
+            document.getElementById('today').addEventListener('click', function() {
+                calendar.today();
+            });
         });
     </script>
 } 
