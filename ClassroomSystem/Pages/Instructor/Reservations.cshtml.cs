@@ -24,7 +24,7 @@ namespace ClassroomSystem.Pages.Instructor
             ApplicationDbContext context,
             IEmailService emailService,
             IHolidayService holidayService,
-            ILogger<ReservationsModel> logger)
+            ILogger<ReservationsModel> logger) : base(logger)
         {
             _context = context;
             _emailService = emailService;

@@ -10,6 +10,22 @@
         <h1 class="h3">Feedback & Contact</h1>
     </div>
 
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>@TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>@TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
     <div class="row">
         <div class="col-md-6">
             <div class="card mb-4">
@@ -17,7 +33,7 @@
                     <h5 class="card-title mb-0">Submit Feedback</h5>
                 </div>
                 <div class="card-body">
-                    <form method="post" asp-page-handler="SubmitFeedback">
+                    <form method="post" id="feedbackForm">
                         @Html.AntiForgeryToken()
                         <div class="mb-3">
                             <label class="form-label">Classroom</label>
@@ -32,13 +48,19 @@
 
                         <div class="mb-3">
                             <label class="form-label">Rating</label>
-                            <div class="rating">
-                                @for (int i = 5; i >= 1; i--)
-                                {
-                                    <input type="radio" name="rating" value="@i" id="star@i" required>
-                                    <label for="star@i"><i class="fas fa-star"></i></label>
-                                }
+                            <div class="star-rating">
+                                <input type="radio" id="star5" name="rating" value="5" />
+                                <label for="star5" title="5 stars"><i class="fas fa-star"></i></label>
+                                <input type="radio" id="star4" name="rating" value="4" />
+                                <label for="star4" title="4 stars"><i class="fas fa-star"></i></label>
+                                <input type="radio" id="star3" name="rating" value="3" />
+                                <label for="star3" title="3 stars"><i class="fas fa-star"></i></label>
+                                <input type="radio" id="star2" name="rating" value="2" />
+                                <label for="star2" title="2 stars"><i class="fas fa-star"></i></label>
+                                <input type="radio" id="star1" name="rating" value="1" />
+                                <label for="star1" title="1 star"><i class="fas fa-star"></i></label>
                             </div>
+                            <div class="invalid-feedback">Please select a rating</div>
                         </div>
 
                         <div class="mb-3">
@@ -71,10 +93,10 @@
                                         <h6 class="mb-0">@feedback.Classroom?.Name</h6>
                                         <small class="text-muted">@feedback.CreatedAt.ToString("g")</small>
                                     </div>
-                                    <div class="mb-2">
+                                    <div class="mb-2 star-display">
                                         @for (int i = 1; i <= 5; i++)
                                         {
-                                            <i class="fas fa-star @(i <= feedback.Rating ? "text-warning" : "text-muted")"></i>
+                                            <i class="fas fa-star @(i <= feedback.Rating ? "text-warning" : "text-secondary")"></i>
                                         }
                                     </div>
                                     <p class="mb-1">@feedback.Comment</p>
@@ -97,27 +119,78 @@
 
 @section Styles {
     <style>
-        .rating {
+        .star-rating {
             display: flex;
             flex-direction: row-reverse;
-            justify-content: flex-end;
+            justify-content: flex-start;
+            gap: 4px;
         }
 
-        .rating input {
+        .star-rating input {
             display: none;
         }
 
-        .rating label {
+        .star-rating label {
             cursor: pointer;
             font-size: 1.5rem;
             color: #ddd;
-            padding: 0 0.1em;
+            transition: color 0.2s ease-in-out;
         }
 
-        .rating input:checked ~ label,
-        .rating label:hover,
-        .rating label:hover ~ label {
+        .star-rating label:hover,
+        .star-rating label:hover ~ label,
+        .star-rating input:checked ~ label {
             color: #ffc107;
         }
+
+        .star-display {
+            font-size: 1.2rem;
+        }
+
+        .star-display .fa-star {
+            margin-right: 2px;
+        }
+
+        .text-secondary {            color: #6c757d !important;        }
+
+        .list-group-item {
+            transition: background-color 0.2s ease-in-out;
+        }
+
+        .list-group-item:hover {
+            background-color: #f8f9fa;
+        }
     </style>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('feedbackForm');
+            const ratingInputs = form.querySelectorAll('input[name="rating"]');
+            
+            // Form validation
+            form.addEventListener('submit', function(e) {
+                let isRatingSelected = Array.from(ratingInputs).some(input => input.checked);
+                
+                if (!isRatingSelected) {
+                    e.preventDefault();
+                    document.querySelector('.star-rating').nextElementSibling.style.display = 'block';
+                    return false;
+                }
+                
+                // Disable submit button to prevent double submission
+                const submitButton = form.querySelector('button[type="submit"]');
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Submitting...';
+            });
+
+            // Clear validation message when rating is selected
+            ratingInputs.forEach(input => {
+                input.addEventListener('change', function() {
+                    document.querySelector('.star-rating').nextElementSibling.style.display = 'none';
+                });
+            });
+        });
+    </script>
 } 

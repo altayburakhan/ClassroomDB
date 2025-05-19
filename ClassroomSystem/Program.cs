@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using ClassroomSystem.Models;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,8 +51,15 @@ builder.Services.AddSession(options =>
     options.IdleTimeout = TimeSpan.FromMinutes(30);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 });
+
+// Add data protection keys persistence
+var keysFolder = Path.Combine(builder.Environment.ContentRootPath, "Keys");
+Directory.CreateDirectory(keysFolder); // Ensure the directory exists
+builder.Services.AddDataProtection()
+    .SetApplicationName("ClassroomSystem")
+    .PersistKeysToFileSystem(new DirectoryInfo(keysFolder));
 
 // Configure authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

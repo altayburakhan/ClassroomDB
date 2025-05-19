@@ -142,3 +142,8 @@ C:\Users\Burakhan\Desktop\Projects\ClassroomSystem\ClassroomSystem\bin\Debug\net
 C:\Users\Burakhan\Desktop\Projects\ClassroomSystem\ClassroomSystem\bin\Debug\net8.0\Microsoft.Extensions.Identity.Stores.dll
 C:\Users\Burakhan\Desktop\Projects\ClassroomSystem\ClassroomSystem\bin\Debug\net8.0\Microsoft.Extensions.Options.dll
 C:\Users\Burakhan\Desktop\Projects\ClassroomSystem\ClassroomSystem\obj\Debug\net8.0\ClassroomSystem.sourcelink.json
+C:\Users\Burakhan\Desktop\Projects\ClassroomSystem\ClassroomSystem\bin\Debug\net8.0\Microsoft.AspNetCore.DataProtection.dll
+C:\Users\Burakhan\Desktop\Projects\ClassroomSystem\ClassroomSystem\bin\Debug\net8.0\Microsoft.AspNetCore.DataProtection.Abstractions.dll
+C:\Users\Burakhan\Desktop\Projects\ClassroomSystem\ClassroomSystem\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll
+C:\Users\Burakhan\Desktop\Projects\ClassroomSystem\ClassroomSystem\bin\Debug\net8.0\Microsoft.Extensions.Logging.Abstractions.dll
+C:\Users\Burakhan\Desktop\Projects\ClassroomSystem\ClassroomSystem\bin\Debug\net8.0\System.Security.Cryptography.Xml.dll

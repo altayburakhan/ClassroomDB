@@ -18,7 +18,9 @@ namespace ClassroomSystem.Pages.Instructor
         private readonly ApplicationDbContext _context;
         private readonly ILogger<IndexModel> _logger;
 
-        public IndexModel(ApplicationDbContext context, ILogger<IndexModel> logger)
+        public IndexModel(
+            ApplicationDbContext context,
+            ILogger<IndexModel> logger) : base(logger)
         {
             _context = context;
             _logger = logger;

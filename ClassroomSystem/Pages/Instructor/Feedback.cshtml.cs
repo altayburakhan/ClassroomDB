@@ -23,7 +23,7 @@ namespace ClassroomSystem.Pages.Instructor
         public FeedbackModel(
             ApplicationDbContext context,
             IEmailService emailService,
-            ILogger<FeedbackModel> logger)
+            ILogger<FeedbackModel> logger) : base(logger)
         {
             _context = context;
             _emailService = emailService;
@@ -31,7 +31,14 @@ namespace ClassroomSystem.Pages.Instructor
         }
 
         [BindProperty]
-        public Feedback Feedback { get; set; }
+        public int ClassroomId { get; set; }
+
+        [BindProperty]
+        public int Rating { get; set; }
+
+        [BindProperty]
+        public string Comment { get; set; }
+
         public List<Classroom> Classrooms { get; set; } = new List<Classroom>();
         public List<Feedback> PreviousFeedback { get; set; } = new List<Feedback>();
 
@@ -40,6 +47,7 @@ namespace ClassroomSystem.Pages.Instructor
             try
             {
                 var userId = GetCurrentUserId();
+                _logger.LogInformation("Loading feedback page for user: {UserId}", userId);
                 
                 // Get all active classrooms
                 Classrooms = await _context.Classrooms
@@ -50,9 +58,12 @@ namespace ClassroomSystem.Pages.Instructor
                 // Get previous feedback
                 PreviousFeedback = await _context.Feedbacks
                     .Include(f => f.Classroom)
+                    .Include(f => f.User)
                     .Where(f => f.UserId == userId)
                     .OrderByDescending(f => f.CreatedAt)
                     .ToListAsync();
+
+                _logger.LogInformation("Found {Count} previous feedback entries for user {UserId}", PreviousFeedback.Count, userId);
 
                 return Page();
             }
@@ -64,7 +75,7 @@ namespace ClassroomSystem.Pages.Instructor
             }
         }
 
-        public async Task<IActionResult> OnPostSubmitFeedbackAsync(int classroomId, int rating, string comment)
+        public async Task<IActionResult> OnPostAsync()
         {
             try
             {
@@ -75,10 +86,11 @@ namespace ClassroomSystem.Pages.Instructor
                 }
 
                 var userId = GetCurrentUserId();
+                _logger.LogInformation("Submitting feedback for user: {UserId}, classroom: {ClassroomId}, rating: {Rating}", userId, ClassroomId, Rating);
 
                 // Validate classroom exists and is active
                 var classroom = await _context.Classrooms
-                    .FirstOrDefaultAsync(c => c.Id == classroomId && c.IsActive);
+                    .FirstOrDefaultAsync(c => c.Id == ClassroomId && c.IsActive);
                 
                 if (classroom == null)
                 {
@@ -88,7 +100,7 @@ namespace ClassroomSystem.Pages.Instructor
                 }
 
                 // Validate rating
-                if (rating < 1 || rating > 5)
+                if (Rating < 1 || Rating > 5)
                 {
                     ModelState.AddModelError("", "Rating must be between 1 and 5");
                     await OnGetAsync(); // Reload the page data
@@ -96,7 +108,7 @@ namespace ClassroomSystem.Pages.Instructor
                 }
 
                 // Validate comment length
-                if (string.IsNullOrWhiteSpace(comment) || comment.Length > 500)
+                if (string.IsNullOrWhiteSpace(Comment) || Comment.Length > 500)
                 {
                     ModelState.AddModelError("", "Comment must be between 1 and 500 characters");
                     await OnGetAsync(); // Reload the page data
@@ -106,27 +118,20 @@ namespace ClassroomSystem.Pages.Instructor
                 var feedback = new Feedback
                 {
                     UserId = userId,
-                    ClassroomId = classroomId,
-                    Rating = rating,
-                    Comment = comment,
-                    CreatedAt = DateTime.UtcNow
+                    ClassroomId = ClassroomId,
+                    Rating = Rating,
+                    Comment = Comment,
+                    CreatedAt = DateTime.UtcNow,
+                    User = await _context.Users.FindAsync(userId),
+                    Classroom = classroom
                 };
 
                 _context.Feedbacks.Add(feedback);
                 await _context.SaveChangesAsync();
+                _logger.LogInformation("Successfully saved feedback with ID: {FeedbackId} for user: {UserId}", feedback.Id, userId);
 
                 // Send email notification to admin
-                var user = await _context.Users.FindAsync(userId);
-                if (user != null)
-                {
-                    await _emailService.SendFeedbackNotificationEmailAsync(
-                        "admin@example.com", // Replace with actual admin email
-                        user.Name,
-                        classroom.Name,
-                        rating,
-                        comment
-                    );
-                }
+                await _emailService.SendFeedbackNotificationAsync(feedback);
 
                 TempData["Success"] = "Feedback submitted successfully.";
                 return RedirectToPage();
