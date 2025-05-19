@@ -1,0 +1,223 @@
+@page
+@model ClassroomSystem.Pages.Instructor.IndexModel
+@using ClassroomSystem.Models
+@{
+    ViewData["Title"] = "Instructor Dashboard";
+    Layout = "Instructor/_Layout";
+}
+
+<div class="container-fluid">
+    <h1 class="h3 mb-4">Instructor Dashboard</h1>
+
+    <div class="row">
+        <!-- Statistics Cards -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Reservations</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.TotalReservations</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Approved Reservations</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.ApprovedReservations</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Pending Reservations</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.PendingReservationsCount</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Rejected Reservations</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.RejectedReservations</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-times fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Upcoming Reservations -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Upcoming Reservations</h6>
+                    <a asp-page="./Reservations" class="btn btn-sm btn-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    @if (Model.UpcomingReservations.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Classroom</th>
+                                        <th>Date</th>
+                                        <th>Time</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var reservation in Model.UpcomingReservations)
+                                    {
+                                        <tr>
+                                            <td>@reservation.Classroom.Name</td>
+                                            <td>@reservation.StartTime.ToShortDateString()</td>
+                                            <td>@reservation.StartTime.ToShortTimeString() - @reservation.EndTime.ToShortTimeString()</td>
+                                            <td>
+                                                <span class="badge bg-@(reservation.Status switch {
+                                                    ReservationStatus.Approved => "success",
+                                                    ReservationStatus.Pending => "warning",
+                                                    ReservationStatus.Rejected => "danger",
+                                                    _ => "secondary"
+                                                })">@reservation.Status</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No upcoming reservations found.</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Feedback -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Recent Feedback</h6>
+                    <a asp-page="./Feedback" class="btn btn-sm btn-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    @if (Model.RecentFeedback.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Classroom</th>
+                                        <th>Rating</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var feedback in Model.RecentFeedback)
+                                    {
+                                        <tr>
+                                            <td>@feedback.Classroom.Name</td>
+                                            <td>
+                                                @for (int i = 1; i <= 5; i++)
+                                                {
+                                                    <i class="fas fa-star @(i <= feedback.Rating ? "text-warning" : "text-muted")"></i>
+                                                }
+                                            </td>
+                                            <td>@feedback.CreatedAt.ToShortDateString()</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No feedback submitted yet.</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Reservation Modal -->
+<div class="modal fade" id="viewReservationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reservation Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="reservationDetails">
+                <!-- Content will be loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function viewReservation(id) {
+            fetch(`/Instructor/Reservations?handler=Details&id=${id}`)
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('reservationDetails').innerHTML = html;
+                    new bootstrap.Modal(document.getElementById('viewReservationModal')).show();
+                });
+        }
+
+        function cancelReservation(id) {
+            if (confirm('Are you sure you want to cancel this reservation?')) {
+                fetch(`/Instructor/Reservations?handler=Cancel&id=${id}`, {
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        alert('Error canceling reservation');
+                    }
+                });
+            }
+        }
+    </script>
+} 

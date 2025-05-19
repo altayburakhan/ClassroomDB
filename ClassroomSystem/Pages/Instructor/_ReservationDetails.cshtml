@@ -1,0 +1,63 @@
+@using ClassroomSystem.Models
+@model ClassroomSystem.Models.Reservation
+
+<div class="reservation-details">
+    <div class="mb-3">
+        <strong>Classroom:</strong>
+        <p class="mb-0">@Model.Classroom.Name (Capacity: @Model.Classroom.Capacity)</p>
+    </div>
+
+    <div class="mb-3">
+        <strong>Date:</strong>
+        <p class="mb-0">@Model.Date.ToLongDateString()</p>
+    </div>
+
+    <div class="mb-3">
+        <strong>Time:</strong>
+        <p class="mb-0">@Model.StartTime.ToString(@"hh\:mm") - @Model.EndTime.ToString(@"hh\:mm")</p>
+    </div>
+
+    <div class="mb-3">
+        <strong>Purpose:</strong>
+        <p class="mb-0">@Model.Purpose</p>
+    </div>
+
+    <div class="mb-3">
+        <strong>Status:</strong>
+        <p class="mb-0">
+            @switch (Model.Status)
+            {
+                case ReservationStatus.Approved:
+                    <span class="badge bg-success">Approved</span>
+                    break;
+                case ReservationStatus.Pending:
+                    <span class="badge bg-warning">Pending</span>
+                    break;
+                case ReservationStatus.Rejected:
+                    <span class="badge bg-danger">Rejected</span>
+                    break;
+            }
+        </p>
+    </div>
+
+    <div class="mb-3">
+        <strong>Created:</strong>
+        <p class="mb-0">@Model.CreatedAt.ToString("g")</p>
+    </div>
+
+    @if (Model.Status == ReservationStatus.Rejected && !string.IsNullOrEmpty(Model.RejectionReason))
+    {
+        <div class="mb-3">
+            <strong>Rejection Reason:</strong>
+            <p class="mb-0 text-danger">@Model.RejectionReason</p>
+        </div>
+    }
+
+    @if (Model.Status == ReservationStatus.Pending)
+    {
+        <div class="alert alert-warning">
+            <i class="fas fa-info-circle me-2"></i>
+            This reservation is pending approval. You can cancel it if needed.
+        </div>
+    }
+</div> 

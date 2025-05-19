@@ -1,0 +1,62 @@
+@model ClassroomSystem.Models.SystemLog
+
+<div class="log-details">
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <div class="event-details-item">
+                <strong>Timestamp:</strong>
+                <span>@Model.Timestamp.ToString("g")</span>
+            </div>
+            <div class="event-details-item">
+                <strong>Type:</strong>
+                <span class="badge bg-@(Model.Type switch {
+                    "Error" => "danger",
+                    "Security" => "warning",
+                    "System" => "info",
+                    _ => "primary"
+                })">@Model.Type</span>
+            </div>
+            <div class="event-details-item">
+                <strong>User:</strong>
+                <span>@Model.UserId</span>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="event-details-item">
+                <strong>Action:</strong>
+                <span>@Model.Action</span>
+            </div>
+            <div class="event-details-item">
+                <strong>Status:</strong>
+                <span class="badge bg-@(Model.IsSuccess ? "success" : "danger")">
+                    @(Model.IsSuccess ? "Success" : "Failed")
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="event-details-item">
+        <strong>Details:</strong>
+        <div class="mt-2 p-3 bg-light rounded">
+            <pre class="mb-0">@Model.Details</pre>
+        </div>
+    </div>
+</div>
+
+<style>
+    .log-details {
+        font-size: 0.9rem;
+    }
+    .event-details-item {
+        margin-bottom: 0.75rem;
+    }
+    .event-details-item strong {
+        display: inline-block;
+        width: 100px;
+        color: #6c757d;
+    }
+    pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+</style> 

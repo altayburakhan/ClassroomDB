@@ -1,0 +1,122 @@
+@page
+@model ClassroomSystem.Pages.Instructor.ReservationsModel
+@using ClassroomSystem.Models
+@{
+    ViewData["Title"] = "My Reservations";
+    Layout = "Instructor/_Layout";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">My Reservations</h1>
+        <a href="/Instructor/Calendar" class="btn btn-primary">
+            <i class="fas fa-plus"></i> New Reservation
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Classroom</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Purpose</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var reservation in Model.Reservations)
+                        {
+                            <tr>
+                                <td>@reservation.Classroom.Name</td>
+                                <td>@reservation.Date.ToShortDateString()</td>
+                                <td>@reservation.StartTime.ToString(@"hh\:mm") - @reservation.EndTime.ToString(@"hh\:mm")</td>
+                                <td>@reservation.Purpose</td>
+                                <td>
+                                    @switch (reservation.Status)
+                                    {
+                                        case ReservationStatus.Approved:
+                                            <span class="badge bg-success">Approved</span>
+                                            break;
+                                        case ReservationStatus.Pending:
+                                            <span class="badge bg-warning">Pending</span>
+                                            break;
+                                        case ReservationStatus.Rejected:
+                                            <span class="badge bg-danger">Rejected</span>
+                                            break;
+                                    }
+                                </td>
+                                <td>@reservation.CreatedAt.ToString("g")</td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-info" onclick="viewReservation(@reservation.Id)">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    @if (reservation.Status == ReservationStatus.Pending)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="cancelReservation(@reservation.Id)">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Reservation Modal -->
+<div class="modal fade" id="viewReservationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reservation Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="reservationDetails">
+                <!-- Content will be loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function viewReservation(id) {
+            fetch(`?handler=Details&id=${id}`)
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('reservationDetails').innerHTML = html;
+                    new bootstrap.Modal(document.getElementById('viewReservationModal')).show();
+                });
+        }
+
+        function cancelReservation(id) {
+            if (confirm('Are you sure you want to cancel this reservation?')) {
+                fetch(`?handler=Cancel&id=${id}`, {
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        alert('Error canceling reservation');
+                    }
+                });
+            }
+        }
+    </script>
+} 

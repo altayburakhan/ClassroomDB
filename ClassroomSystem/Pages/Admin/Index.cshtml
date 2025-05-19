@@ -1,0 +1,203 @@
+@page
+@model ClassroomSystem.Pages.Admin.IndexModel
+@{
+    ViewData["Title"] = "Admin Dashboard";
+    Layout = "_AdminLayout";
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h4 class="mb-0">Dashboard</h4>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/Admin">Admin</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Dashboard</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-3 col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted text-uppercase fw-semibold mt-0 mb-2">Total Users</h6>
+                        <h3 class="mb-2">@Model.TotalUsers</h3>
+                        <p class="mb-0 text-muted">
+                            <span class="text-success me-2">
+                                <i class="mdi mdi-arrow-up-bold"></i> @Model.NewUsersThisWeek
+                            </span>
+                            <span class="text-nowrap">Since last week</span>
+                        </p>
+                    </div>
+                    <div class="avatar-sm rounded bg-primary bg-opacity-10">
+                        <span class="avatar-title rounded">
+                            <i class="mdi mdi-account-multiple font-20 text-primary"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted text-uppercase fw-semibold mt-0 mb-2">Total Classrooms</h6>
+                        <h3 class="mb-2">@Model.TotalClassrooms</h3>
+                        <p class="mb-0 text-muted">
+                            <span class="text-success me-2">
+                                <i class="mdi mdi-arrow-up-bold"></i> @Model.AvailableClassrooms
+                            </span>
+                            <span class="text-nowrap">Available now</span>
+                        </p>
+                    </div>
+                    <div class="avatar-sm rounded bg-info bg-opacity-10">
+                        <span class="avatar-title rounded">
+                            <i class="mdi mdi-office-building font-20 text-info"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted text-uppercase fw-semibold mt-0 mb-2">Total Reservations</h6>
+                        <h3 class="mb-2">@Model.TotalReservations</h3>
+                        <p class="mb-0 text-muted">
+                            <span class="text-warning me-2">
+                                <i class="mdi mdi-arrow-up-bold"></i> @Model.PendingReservations
+                            </span>
+                            <span class="text-nowrap">Pending approval</span>
+                        </p>
+                    </div>
+                    <div class="avatar-sm rounded bg-warning bg-opacity-10">
+                        <span class="avatar-title rounded">
+                            <i class="mdi mdi-calendar-check font-20 text-warning"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted text-uppercase fw-semibold mt-0 mb-2">Active Terms</h6>
+                        <h3 class="mb-2">@Model.ActiveTerms</h3>
+                        <p class="mb-0 text-muted">
+                            <span class="text-success me-2">
+                                <i class="mdi mdi-arrow-up-bold"></i> @Model.UpcomingTerms
+                            </span>
+                            <span class="text-nowrap">Upcoming terms</span>
+                        </p>
+                    </div>
+                    <div class="avatar-sm rounded bg-success bg-opacity-10">
+                        <span class="avatar-title rounded">
+                            <i class="mdi mdi-calendar-clock font-20 text-success"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="header-title mb-0">Weekly Schedule</h4>
+                <div class="dropdown">
+                    <button class="btn btn-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="mdi mdi-calendar"></i> This Week
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end">
+                        <a class="dropdown-item" href="#">This Week</a>
+                        <a class="dropdown-item" href="#">Next Week</a>
+                        <a class="dropdown-item" href="#">Previous Week</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-centered table-nowrap table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Classroom</th>
+                                <th>Instructor</th>
+                                <th>Time</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var reservation in Model.WeeklySchedule)
+                            {
+                                <tr>
+                                    <td>@reservation.ClassroomName</td>
+                                    <td>@reservation.InstructorName</td>
+                                    <td>@reservation.StartTime.ToString("HH:mm") - @reservation.EndTime.ToString("HH:mm")</td>
+                                    <td>
+                                        <span class="badge bg-@(reservation.Status == ReservationStatus.Approved ? "success" : "warning")">
+                                            @reservation.Status
+                                        </span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="header-title mb-0">Recent Feedback</h4>
+                <a href="/Admin/Feedback" class="btn btn-light btn-sm">
+                    View All <i class="mdi mdi-arrow-right ms-1"></i>
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="inbox-widget">
+                    @foreach (var feedback in Model.RecentFeedback)
+                    {
+                        <div class="inbox-item d-flex align-items-center py-3 border-bottom">
+                            <div class="inbox-item-img me-3">
+                                <img src="~/images/users/default-avatar.png" class="rounded-circle" alt="" width="40">
+                            </div>
+                            <div class="inbox-item-content flex-grow-1">
+                                <h5 class="inbox-item-author mt-0 mb-1">@feedback.InstructorName</h5>
+                                <p class="inbox-item-text text-muted mb-0">@feedback.ClassroomName</p>
+                            </div>
+                            <div class="inbox-item-date">
+                                <span class="badge bg-@(feedback.Rating >= 4 ? "success" : feedback.Rating >= 3 ? "warning" : "danger")">
+                                    @feedback.Rating <i class="mdi mdi-star"></i>
+                                </span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Add any dashboard-specific JavaScript here
+    </script>
+} 

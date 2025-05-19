@@ -1,0 +1,376 @@
+@page
+@model ClassroomSystem.Pages.Instructor.CalendarModel
+@{
+    ViewData["Title"] = "Classroom Calendar";
+    Layout = "Instructor/_Layout";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">Classroom Calendar</h1>
+        <div class="d-flex gap-2">
+            <div class="btn-group">
+                <button type="button" class="btn btn-outline-primary" id="prevWeek">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button type="button" class="btn btn-outline-primary" id="today">Today</button>
+                <button type="button" class="btn btn-outline-primary" id="nextWeek">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addReservationModal">
+                <i class="fas fa-plus"></i> New Reservation
+            </button>
+        </div>
+    </div>
+
+    @if (TempData["Warning"] != null)
+    {
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            @TempData["Warning"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="card">
+        <div class="card-body">
+            <div class="calendar-legend mb-3">
+                <span class="badge bg-success me-2">Approved</span>
+                <span class="badge bg-warning me-2">Pending</span>
+                <span class="badge bg-danger me-2">Rejected</span>
+                <span class="badge bg-secondary me-2">Holiday</span>
+                <span class="badge bg-danger me-2"><i class="fas fa-exclamation-triangle"></i> Conflict</span>
+            </div>
+            <div id="calendar"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Reservation Modal -->
+<div class="modal fade" id="addReservationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">New Reservation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" asp-page-handler="AddReservation" id="reservationForm">
+                <div class="modal-body">
+                    <input type="hidden" id="reservationDate" name="date">
+                    <input type="hidden" id="reservationStartTime" name="startTime">
+                    <input type="hidden" id="reservationEndTime" name="endTime">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Classroom</label>
+                        <select class="form-select" name="classroomId" required>
+                            <option value="">Select Classroom</option>
+                            @foreach (var classroom in Model.Classrooms)
+                            {
+                                <option value="@classroom.Id">@classroom.Name (Capacity: @classroom.Capacity)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Start Time</label>
+                            <select class="form-select" name="startTime" required>
+                                @foreach (var slot in Model.TimeSlots)
+                                {
+                                    <option value="@slot.StartTime">@slot.StartTime.ToString(@"hh\:mm")</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">End Time</label>
+                            <select class="form-select" name="endTime" required>
+                                @foreach (var slot in Model.TimeSlots)
+                                {
+                                    <option value="@slot.EndTime">@slot.EndTime.ToString(@"hh\:mm")</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Purpose</label>
+                        <textarea class="form-control" name="purpose" rows="3" required></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="repeatWeekly" name="repeatWeekly">
+                            <label class="form-check-label" for="repeatWeekly">
+                                Repeat weekly for the current term
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="reservationWarnings" class="alert alert-warning d-none">
+                        <!-- Warnings will be shown here -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit Request</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Event Details Modal -->
+<div class="modal fade" id="eventDetailsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reservation Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="eventDetails">
+                <!-- Content will be loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+    <style>
+        .fc-event {
+            cursor: pointer;
+            border-radius: 4px;
+            padding: 2px 4px;
+        }
+        .fc-event.pending {
+            background-color: #ffc107;
+            border-color: #ffc107;
+        }
+        .fc-event.approved {
+            background-color: #198754;
+            border-color: #198754;
+        }
+        .fc-event.rejected {
+            background-color: #dc3545;
+            border-color: #dc3545;
+        }
+        .fc-event.holiday {
+            background-color: #6c757d;
+            border-color: #6c757d;
+        }
+        .fc-event.conflict {
+            background-color: #dc3545;
+            border-color: #dc3545;
+            border-style: dashed;
+        }
+        .calendar-legend {
+            font-size: 0.9em;
+        }
+        .calendar-legend .badge {
+            padding: 0.5em 0.8em;
+        }
+        .event-details-item {
+            margin-bottom: 0.5rem;
+        }
+        .event-details-item strong {
+            display: inline-block;
+            width: 100px;
+        }
+        .holiday-warning {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .conflict-warning {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .fc-toolbar-title {
+            font-size: 1.2em !important;
+        }
+        .fc-button-primary {
+            background-color: #0d6efd !important;
+            border-color: #0d6efd !important;
+        }
+        .fc-button-primary:hover {
+            background-color: #0b5ed7 !important;
+            border-color: #0a58ca !important;
+        }
+        .fc-button-primary:disabled {
+            background-color: #0d6efd !important;
+            border-color: #0d6efd !important;
+            opacity: 0.65;
+        }
+        .fc-timegrid-slot {
+            height: 60px !important;
+        }
+        .fc-event-title {
+            font-size: 0.9em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('calendar');
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'timeGridWeek',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                slotMinTime: '08:00:00',
+                slotMaxTime: '17:00:00',
+                slotDuration: '01:30:00',
+                allDaySlot: false,
+                weekends: false,
+                timeZone: 'local',
+                events: @Html.Raw(Json.Serialize(Model.CalendarEvents)),
+                eventClick: function(info) {
+                    showEventDetails(info.event);
+                },
+                dateClick: function(info) {
+                    if (info.date >= new Date().setHours(0,0,0,0)) {
+                        showReservationModal(
+                            info.dateStr,
+                            '08:00:00',
+                            '09:30:00'
+                        );
+                    }
+                },
+                eventDidMount: function(info) {
+                    // Add tooltips
+                    if (info.event.extendedProps.hasConflict) {
+                        info.el.title = 'This reservation has a conflict';
+                    }
+                    if (info.event.extendedProps.isHoliday) {
+                        info.el.title = 'Holiday: ' + info.event.title;
+                    }
+                }
+            });
+            calendar.render();
+
+            // Handle week navigation
+            document.getElementById('prevWeek').addEventListener('click', function() {
+                calendar.prev();
+            });
+            document.getElementById('nextWeek').addEventListener('click', function() {
+                calendar.next();
+            });
+            document.getElementById('today').addEventListener('click', function() {
+                calendar.today();
+            });
+
+            // Reservation form validation
+            const reservationForm = document.getElementById('reservationForm');
+            const startTimeSelect = reservationForm.querySelector('select[name="startTime"]');
+            const endTimeSelect = reservationForm.querySelector('select[name="endTime"]');
+            const warningsDiv = document.getElementById('reservationWarnings');
+
+            function validateTimeSlots() {
+                const startTime = new Date('1970-01-01T' + startTimeSelect.value);
+                const endTime = new Date('1970-01-01T' + endTimeSelect.value);
+                
+                if (endTime <= startTime) {
+                    warningsDiv.textContent = 'End time must be after start time';
+                    warningsDiv.classList.remove('d-none');
+                    return false;
+                }
+
+                const duration = (endTime - startTime) / (1000 * 60 * 60);
+                if (duration < 1.5) {
+                    warningsDiv.textContent = 'Reservation must be at least 1.5 hours';
+                    warningsDiv.classList.remove('d-none');
+                    return false;
+                }
+
+                warningsDiv.classList.add('d-none');
+                return true;
+            }
+
+            startTimeSelect.addEventListener('change', validateTimeSlots);
+            endTimeSelect.addEventListener('change', validateTimeSlots);
+
+            reservationForm.addEventListener('submit', function(e) {
+                if (!validateTimeSlots()) {
+                    e.preventDefault();
+                }
+            });
+
+            function showReservationModal(date, startTime, endTime) {
+                document.getElementById('reservationDate').value = date;
+                document.getElementById('reservationStartTime').value = startTime;
+                document.getElementById('reservationEndTime').value = endTime;
+                
+                // Reset form
+                reservationForm.reset();
+                warningsDiv.classList.add('d-none');
+                
+                // Set initial time values
+                startTimeSelect.value = startTime;
+                endTimeSelect.value = endTime;
+                
+                new bootstrap.Modal(document.getElementById('addReservationModal')).show();
+            }
+
+            function showEventDetails(event) {
+                const details = document.getElementById('eventDetails');
+                const props = event.extendedProps;
+                
+                let html = `
+                    <div class="event-details-item">
+                        <strong>Classroom:</strong> ${event.title.split(' - ')[0]}
+                    </div>
+                    <div class="event-details-item">
+                        <strong>Instructor:</strong> ${event.title.split(' - ')[1]}
+                    </div>
+                    <div class="event-details-item">
+                        <strong>Date:</strong> ${event.start.toLocaleDateString()}
+                    </div>
+                    <div class="event-details-item">
+                        <strong>Time:</strong> ${event.start.toLocaleTimeString()} - ${event.end.toLocaleTimeString()}
+                    </div>
+                    <div class="event-details-item">
+                        <strong>Status:</strong> ${props.status}
+                    </div>
+                `;
+
+                if (props.purpose) {
+                    html += `
+                        <div class="event-details-item">
+                            <strong>Purpose:</strong> ${props.purpose}
+                        </div>
+                    `;
+                }
+
+                if (props.hasConflict) {
+                    html += `
+                        <div class="event-details-item conflict-warning">
+                            <i class="fas fa-exclamation-triangle"></i> This reservation has a conflict
+                        </div>
+                    `;
+                }
+
+                if (props.isHoliday) {
+                    html += `
+                        <div class="event-details-item holiday-warning">
+                            <i class="fas fa-calendar"></i> This is a holiday
+                        </div>
+                    `;
+                }
+
+                details.innerHTML = html;
+                new bootstrap.Modal(document.getElementById('eventDetailsModal')).show();
+            }
+        });
+    </script>
+} 

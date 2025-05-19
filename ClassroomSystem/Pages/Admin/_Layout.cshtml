@@ -1,0 +1,46 @@
+<div class="container-fluid">
+    <div class="row">
+        <nav class="col-md-2 d-none d-md-block bg-light sidebar">
+            <div class="sidebar-sticky">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["Page"].ToString() == "/Admin/Index" ? "active" : "")" asp-page="/Admin/Index">
+                            <i class="fas fa-home"></i>
+                            Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["Page"].ToString() == "/Admin/Users" ? "active" : "")" asp-page="/Admin/Users">
+                            <i class="fas fa-users"></i>
+                            Users
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["Page"].ToString() == "/Admin/Classrooms" ? "active" : "")" asp-page="/Admin/Classrooms">
+                            <i class="fas fa-chalkboard"></i>
+                            Classrooms
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["Page"].ToString() == "/Admin/Terms" ? "active" : "")" asp-page="/Admin/Terms">
+                            <i class="fas fa-calendar-alt"></i>
+                            Terms
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["Page"].ToString() == "/Admin/Reservations" ? "active" : "")" asp-page="/Admin/Reservations">
+                            <i class="fas fa-calendar-check"></i>
+                            Reservations
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4">
+            @RenderBody()
+        </main>
+    </div>
+</div>
+
+@await RenderSectionAsync("Scripts", required: false) 

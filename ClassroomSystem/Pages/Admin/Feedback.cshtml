@@ -1,0 +1,369 @@
+@page
+@model ClassroomSystem.Pages.Admin.FeedbackModel
+@{
+    ViewData["Title"] = "Feedback Management";
+    Layout = "_AdminLayout";
+}
+
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Feedback Management</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="/Admin">Dashboard</a></li>
+        <li class="breadcrumb-item active">Feedback</li>
+    </ol>
+
+    <div class="row">
+        <!-- Feedback Statistics -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-primary text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="mb-0">@Model.TotalFeedback</h3>
+                            <div class="small">Total Feedback</div>
+                        </div>
+                        <div class="fs-1">
+                            <i class="mdi mdi-message-text"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-success text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="mb-0">@Model.PositiveFeedback</h3>
+                            <div class="small">Positive Feedback</div>
+                        </div>
+                        <div class="fs-1">
+                            <i class="mdi mdi-thumb-up"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-warning text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="mb-0">@Model.NeutralFeedback</h3>
+                            <div class="small">Neutral Feedback</div>
+                        </div>
+                        <div class="fs-1">
+                            <i class="mdi mdi-thumb-up-down"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-danger text-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="mb-0">@Model.NegativeFeedback</h3>
+                            <div class="small">Negative Feedback</div>
+                        </div>
+                        <div class="fs-1">
+                            <i class="mdi mdi-thumb-down"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <i class="mdi mdi-message-text-outline me-1"></i>
+                Feedback List
+            </div>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-success btn-sm" id="exportExcel">
+                    <i class="mdi mdi-file-excel"></i> Export to Excel
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Filters -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <select class="form-select" id="classroomFilter">
+                        <option value="">All Classrooms</option>
+                        @foreach (var classroom in Model.Classrooms)
+                        {
+                            <option value="@classroom.Id">@classroom.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="ratingFilter">
+                        <option value="">All Ratings</option>
+                        <option value="5">5 Stars</option>
+                        <option value="4">4 Stars</option>
+                        <option value="3">3 Stars</option>
+                        <option value="2">2 Stars</option>
+                        <option value="1">1 Star</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <input type="date" class="form-control" id="dateFilter">
+                </div>
+                <div class="col-md-3">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="searchFilter" placeholder="Search...">
+                        <button class="btn btn-outline-secondary" type="button" id="clearSearch">
+                            <i class="mdi mdi-close"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="feedbackTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Classroom</th>
+                            <th>User</th>
+                            <th>Rating</th>
+                            <th>Comment</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var feedback in Model.Feedbacks)
+                        {
+                            <tr>
+                                <td>@feedback.Classroom.Name</td>
+                                <td>@feedback.User.FullName</td>
+                                <td>
+                                    <div class="text-warning">
+                                        @for (int i = 0; i < feedback.Rating; i++)
+                                        {
+                                            <i class="mdi mdi-star"></i>
+                                        }
+                                        @for (int i = feedback.Rating; i < 5; i++)
+                                        {
+                                            <i class="mdi mdi-star-outline"></i>
+                                        }
+                                    </div>
+                                </td>
+                                <td>@feedback.Comment</td>
+                                <td>@feedback.CreatedAt.ToShortDateString()</td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <button type="button" class="btn btn-info btn-sm"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#viewFeedbackModal"
+                                                data-feedback-id="@feedback.Id">
+                                            <i class="mdi mdi-eye"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-danger btn-sm"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#deleteFeedbackModal"
+                                                data-feedback-id="@feedback.Id">
+                                            <i class="mdi mdi-delete"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Feedback Modal -->
+<div class="modal fade" id="viewFeedbackModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Feedback Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Basic Information</h6>
+                        <dl class="row">
+                            <dt class="col-sm-4">Classroom</dt>
+                            <dd class="col-sm-8" id="viewClassroom"></dd>
+
+                            <dt class="col-sm-4">User</dt>
+                            <dd class="col-sm-8" id="viewUser"></dd>
+
+                            <dt class="col-sm-4">Date</dt>
+                            <dd class="col-sm-8" id="viewDate"></dd>
+
+                            <dt class="col-sm-4">Rating</dt>
+                            <dd class="col-sm-8" id="viewRating"></dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Additional Details</h6>
+                        <dl class="row">
+                            <dt class="col-sm-4">Features Rating</dt>
+                            <dd class="col-sm-8" id="viewFeaturesRating"></dd>
+
+                            <dt class="col-sm-4">Cleanliness Rating</dt>
+                            <dd class="col-sm-8" id="viewCleanlinessRating"></dd>
+
+                            <dt class="col-sm-4">Equipment Rating</dt>
+                            <dd class="col-sm-8" id="viewEquipmentRating"></dd>
+                        </dl>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6>Comment</h6>
+                        <p id="viewComment"></p>
+                    </div>
+                </div>
+                <div class="row mt-3" id="issuesSection" style="display: none;">
+                    <div class="col-12">
+                        <h6>Reported Issues</h6>
+                        <ul id="viewIssues" class="list-unstyled"></ul>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Feedback Modal -->
+<div class="modal fade" id="deleteFeedbackModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Feedback</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" asp-page-handler="DeleteFeedback">
+                <input type="hidden" name="Id" id="deleteFeedbackId">
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this feedback? This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Initialize DataTable
+            var table = $('#feedbackTable').DataTable({
+                order: [[4, 'desc']],
+                pageLength: 25,
+                dom: 'Bfrtip',
+                buttons: ['excel']
+            });
+
+            // Apply filters
+            $('#classroomFilter, #ratingFilter, #dateFilter').on('change', function() {
+                table.draw();
+            });
+
+            $('#searchFilter').on('keyup', function() {
+                table.search(this.value).draw();
+            });
+
+            $('#clearSearch').on('click', function() {
+                $('#searchFilter').val('').trigger('keyup');
+            });
+
+            // Custom filtering function
+            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                var classroom = $('#classroomFilter').val();
+                var rating = $('#ratingFilter').val();
+                var date = $('#dateFilter').val();
+
+                if (classroom && data[0] !== classroom) return false;
+                if (rating && !data[2].includes('mdi-star'.repeat(parseInt(rating)))) return false;
+                if (date && data[4] !== date) return false;
+
+                return true;
+            });
+
+            // Handle View Modal
+            $('#viewFeedbackModal').on('show.bs.modal', function (event) {
+                var button = $(event.relatedTarget);
+                var feedbackId = button.data('feedback-id');
+                var feedback = @Html.Raw(Json.Serialize(Model.Feedbacks))
+                    .find(f => f.id === feedbackId);
+
+                if (feedback) {
+                    $('#viewClassroom').text(feedback.classroom.name);
+                    $('#viewUser').text(feedback.user.fullName);
+                    $('#viewDate').text(new Date(feedback.createdAt).toLocaleDateString());
+                    
+                    // Rating stars
+                    var ratingHtml = '';
+                    for (var i = 0; i < feedback.rating; i++) {
+                        ratingHtml += '<i class="mdi mdi-star text-warning"></i>';
+                    }
+                    for (var i = feedback.rating; i < 5; i++) {
+                        ratingHtml += '<i class="mdi mdi-star-outline text-warning"></i>';
+                    }
+                    $('#viewRating').html(ratingHtml);
+
+                    // Feature ratings
+                    $('#viewFeaturesRating').html(getRatingStars(feedback.featuresRating));
+                    $('#viewCleanlinessRating').html(getRatingStars(feedback.cleanlinessRating));
+                    $('#viewEquipmentRating').html(getRatingStars(feedback.equipmentRating));
+
+                    $('#viewComment').text(feedback.comment);
+
+                    // Show issues if any
+                    if (feedback.issues && feedback.issues.length > 0) {
+                        $('#issuesSection').show();
+                        var issuesHtml = '';
+                        feedback.issues.forEach(issue => {
+                            issuesHtml += `<li><i class="mdi mdi-alert text-danger me-2"></i>${issue}</li>`;
+                        });
+                        $('#viewIssues').html(issuesHtml);
+                    } else {
+                        $('#issuesSection').hide();
+                    }
+                }
+            });
+
+            // Handle Delete Modal
+            $('#deleteFeedbackModal').on('show.bs.modal', function (event) {
+                var button = $(event.relatedTarget);
+                var feedbackId = button.data('feedback-id');
+                $('#deleteFeedbackId').val(feedbackId);
+            });
+
+            // Export to Excel
+            $('#exportExcel').on('click', function() {
+                table.button('.buttons-excel').trigger();
+            });
+        });
+
+        function getRatingStars(rating) {
+            var html = '';
+            for (var i = 0; i < rating; i++) {
+                html += '<i class="mdi mdi-star text-warning"></i>';
+            }
+            for (var i = rating; i < 5; i++) {
+                html += '<i class="mdi mdi-star-outline text-warning"></i>';
+            }
+            return html;
+        }
+    </script>
+} 

@@ -1,0 +1,155 @@
+@page
+@model ClassroomSystem.Pages.Admin.LogsModel
+@{
+    ViewData["Title"] = "System Logs";
+    Layout = "_Layout";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">System Logs</h1>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-primary" id="exportLogs">
+                <i class="fas fa-download"></i> Export Logs
+            </button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="get" class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <label class="form-label">Log Type</label>
+                    <select class="form-select" name="type" asp-items="Model.LogTypes">
+                        <option value="">All Types</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" name="status">
+                        <option value="">All Status</option>
+                        <option value="true">Success</option>
+                        <option value="false">Failed</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Date Range</label>
+                    <input type="date" class="form-control" name="startDate" value="@Model.StartDate?.ToString("yyyy-MM-dd")">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label>
+                    <input type="date" class="form-control" name="endDate" value="@Model.EndDate?.ToString("yyyy-MM-dd")">
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter"></i> Apply Filters
+                    </button>
+                    <a href="@Url.Page("/Admin/Logs")" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Clear Filters
+                    </a>
+                </div>
+            </form>
+
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Type</th>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th>Details</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var log in Model.Logs)
+                        {
+                            <tr>
+                                <td>@log.Timestamp.ToString("g")</td>
+                                <td>
+                                    <span class="badge bg-@(log.Type switch {
+                                        "Error" => "danger",
+                                        "Security" => "warning",
+                                        "System" => "info",
+                                        _ => "primary"
+                                    })">
+                                        @log.Type
+                                    </span>
+                                </td>
+                                <td>@log.UserId</td>
+                                <td>@log.Action</td>
+                                <td>
+                                    <button type="button" class="btn btn-link btn-sm p-0" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#logDetailsModal"
+                                            data-log-id="@log.Id">
+                                        View Details
+                                    </button>
+                                </td>
+                                <td>
+                                    <span class="badge bg-@(log.IsSuccess ? "success" : "danger")">
+                                        @(log.IsSuccess ? "Success" : "Failed")
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <partial name="_Pagination" model="Model.Pagination" />
+        </div>
+    </div>
+</div>
+
+<!-- Log Details Modal -->
+<div class="modal fade" id="logDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Log Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="logDetails">
+                <!-- Content will be loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle log details modal
+            const logDetailsModal = document.getElementById('logDetailsModal');
+            logDetailsModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const logId = button.getAttribute('data-log-id');
+                
+                fetch(`?handler=LogDetails&id=${logId}`, {
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    }
+                })
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('logDetails').innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error loading log details:', error);
+                });
+            });
+
+            // Handle export logs
+            document.getElementById('exportLogs').addEventListener('click', function() {
+                const url = new URL(window.location.href);
+                url.searchParams.set('handler', 'ExportLogs');
+                window.location.href = url.toString();
+            });
+        });
+    </script>
+} 

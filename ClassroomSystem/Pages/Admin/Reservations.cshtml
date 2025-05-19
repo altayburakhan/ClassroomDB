@@ -1,0 +1,446 @@
+@page
+@model ClassroomSystem.Pages.Admin.ReservationsModel
+@using ClassroomSystem.Models
+@{
+    ViewData["Title"] = "Reservations";
+    Layout = "_AdminLayout";
+}
+
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Reservations</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="/Admin">Dashboard</a></li>
+        <li class="breadcrumb-item active">Reservations</li>
+    </ol>
+
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <i class="mdi mdi-calendar-check me-1"></i>
+                Reservations Management
+            </div>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-success btn-sm" id="exportExcel">
+                    <i class="mdi mdi-file-excel"></i> Export to Excel
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addReservationModal">
+                    <i class="mdi mdi-plus"></i> Add New Reservation
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Filters -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <select class="form-select" id="statusFilter">
+                        <option value="">All Statuses</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Approved">Approved</option>
+                        <option value="Rejected">Rejected</option>
+                        <option value="Cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="classroomFilter">
+                        <option value="">All Classrooms</option>
+                        @foreach (var classroom in Model.Classrooms)
+                        {
+                            <option value="@classroom.Id">@classroom.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="instructorFilter">
+                        <option value="">All Instructors</option>
+                        @foreach (var instructor in Model.Instructors)
+                        {
+                            <option value="@instructor.Id">@instructor.FullName</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <input type="date" class="form-control" id="dateFilter">
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="reservationsTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Classroom</th>
+                            <th>Instructor</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Purpose</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var reservation in Model.Reservations)
+                        {
+                            <tr>
+                                <td>@reservation.Classroom.Name</td>
+                                <td>@reservation.User.FullName</td>
+                                <td>@reservation.StartTime.ToShortDateString()</td>
+                                <td>@reservation.FormattedTimeSlot</td>
+                                <td>@reservation.Purpose</td>
+                                <td>
+                                    <span class="badge bg-@GetStatusColor(reservation.Status)">
+                                        @reservation.Status
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <button type="button" class="btn btn-info btn-sm" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#viewReservationModal"
+                                                data-reservation-id="@reservation.Id">
+                                            <i class="mdi mdi-eye"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-primary btn-sm"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#editReservationModal"
+                                                data-reservation-id="@reservation.Id">
+                                            <i class="mdi mdi-pencil"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-danger btn-sm"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#deleteReservationModal"
+                                                data-reservation-id="@reservation.Id">
+                                            <i class="mdi mdi-delete"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="d-flex justify-content-between align-items-center mt-4">
+                <div class="text-muted">
+                    Showing @Model.Pagination.StartItem to @Model.Pagination.EndItem of @Model.Pagination.TotalItems entries
+                </div>
+                <nav>
+                    <ul class="pagination mb-0">
+                        @for (int i = 1; i <= Model.Pagination.TotalPages; i++)
+                        {
+                            <li class="page-item @(i == Model.Pagination.CurrentPage ? "active" : "")">
+                                <a class="page-link" href="?page=@i">@i</a>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Reservation Modal -->
+<div class="modal fade" id="viewReservationModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reservation Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Basic Information</h6>
+                        <dl class="row">
+                            <dt class="col-sm-4">Classroom</dt>
+                            <dd class="col-sm-8" id="viewClassroom"></dd>
+
+                            <dt class="col-sm-4">Instructor</dt>
+                            <dd class="col-sm-8" id="viewInstructor"></dd>
+
+                            <dt class="col-sm-4">Date</dt>
+                            <dd class="col-sm-8" id="viewDate"></dd>
+
+                            <dt class="col-sm-4">Time</dt>
+                            <dd class="col-sm-8" id="viewTime"></dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Additional Details</h6>
+                        <dl class="row">
+                            <dt class="col-sm-4">Purpose</dt>
+                            <dd class="col-sm-8" id="viewPurpose"></dd>
+
+                            <dt class="col-sm-4">Status</dt>
+                            <dd class="col-sm-8" id="viewStatus"></dd>
+
+                            <dt class="col-sm-4">Created At</dt>
+                            <dd class="col-sm-8" id="viewCreatedAt"></dd>
+
+                            <dt class="col-sm-4">Updated At</dt>
+                            <dd class="col-sm-8" id="viewUpdatedAt"></dd>
+                        </dl>
+                    </div>
+                </div>
+                <div class="row mt-3" id="rejectionReasonSection" style="display: none;">
+                    <div class="col-12">
+                        <h6>Rejection Reason</h6>
+                        <p id="viewRejectionReason" class="text-danger"></p>
+                    </div>
+                </div>
+                <div class="row mt-3" id="notesSection" style="display: none;">
+                    <div class="col-12">
+                        <h6>Notes</h6>
+                        <p id="viewNotes"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Reservation Modal -->
+<div class="modal fade" id="editReservationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Reservation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" asp-page-handler="EditReservation">
+                <input type="hidden" name="Id" id="editReservationId">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" name="Status" id="editStatus" required>
+                            <option value="Pending">Pending</option>
+                            <option value="Approved">Approved</option>
+                            <option value="Rejected">Rejected</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="rejectionReasonInput" style="display: none;">
+                        <label class="form-label">Rejection Reason</label>
+                        <textarea class="form-control" name="RejectionReason" id="editRejectionReason"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-control" name="Notes" id="editNotes" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Reservation Modal -->
+<div class="modal fade" id="deleteReservationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Reservation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" asp-page-handler="DeleteReservation">
+                <input type="hidden" name="Id" id="deleteReservationId">
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this reservation? This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add New Reservation Modal -->
+<div class="modal fade" id="addReservationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Reservation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" asp-page-handler="AddReservation">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Classroom</label>
+                        <select class="form-select" name="classroomId" required>
+                            <option value="">Select Classroom</option>
+                            @foreach (var classroom in Model.Classrooms)
+                            {
+                                <option value="@classroom.Id">@classroom.Name (Capacity: @classroom.Capacity)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Instructor</label>
+                        <select class="form-select" name="instructorId" required>
+                            <option value="">Select Instructor</option>
+                            @foreach (var instructor in Model.Instructors)
+                            {
+                                <option value="@instructor.Id">@instructor.FirstName @instructor.LastName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Date</label>
+                        <input type="date" class="form-control" name="date" required min="@DateTime.Today.ToString("yyyy-MM-dd")">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Start Time</label>
+                                <input type="time" class="form-control" name="startTime" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">End Time</label>
+                                <input type="time" class="form-control" name="endTime" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Purpose</label>
+                        <textarea class="form-control" name="purpose" required rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Reservation</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@functions {
+    private string GetStatusColor(ReservationStatus status)
+    {
+        return status switch
+        {
+            ReservationStatus.Pending => "warning",
+            ReservationStatus.Approved => "success",
+            ReservationStatus.Rejected => "danger",
+            ReservationStatus.Cancelled => "secondary",
+            _ => "primary"
+        };
+    }
+}
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Initialize DataTable
+            var table = $('#reservationsTable').DataTable({
+                order: [[2, 'desc'], [3, 'desc']],
+                pageLength: 25,
+                dom: 'Bfrtip',
+                buttons: ['excel']
+            });
+
+            // Apply filters
+            $('#statusFilter, #classroomFilter, #instructorFilter, #dateFilter').on('change', function() {
+                table.draw();
+            });
+
+            // Custom filtering function
+            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                var status = $('#statusFilter').val();
+                var classroom = $('#classroomFilter').val();
+                var instructor = $('#instructorFilter').val();
+                var date = $('#dateFilter').val();
+
+                if (status && data[5].indexOf(status) === -1) return false;
+                if (classroom && data[0] !== classroom) return false;
+                if (instructor && data[1] !== instructor) return false;
+                if (date && data[2] !== date) return false;
+
+                return true;
+            });
+
+            // Handle Edit Modal
+            $('#editReservationModal').on('show.bs.modal', function (event) {
+                var button = $(event.relatedTarget);
+                var reservationId = button.data('reservation-id');
+                var reservation = @Html.Raw(Json.Serialize(Model.Reservations))
+                    .find(r => r.id === reservationId);
+
+                if (reservation) {
+                    $('#editReservationId').val(reservation.id);
+                    $('#editStatus').val(reservation.status);
+                    $('#editRejectionReason').val(reservation.rejectionReason);
+                    $('#editNotes').val(reservation.notes);
+
+                    // Show/hide rejection reason input based on status
+                    $('#rejectionReasonInput').toggle(reservation.status === 'Rejected');
+                }
+            });
+
+            // Show/hide rejection reason input when status changes
+            $('#editStatus').on('change', function() {
+                $('#rejectionReasonInput').toggle($(this).val() === 'Rejected');
+            });
+
+            // Handle View Modal
+            $('#viewReservationModal').on('show.bs.modal', function (event) {
+                var button = $(event.relatedTarget);
+                var reservationId = button.data('reservation-id');
+                var reservation = @Html.Raw(Json.Serialize(Model.Reservations))
+                    .find(r => r.id === reservationId);
+
+                if (reservation) {
+                    $('#viewClassroom').text(reservation.classroom.name);
+                    $('#viewInstructor').text(reservation.user.fullName);
+                    $('#viewDate').text(new Date(reservation.startTime).toLocaleDateString());
+                    $('#viewTime').text(reservation.formattedTimeSlot);
+                    $('#viewPurpose').text(reservation.purpose);
+                    $('#viewStatus').html(`<span class="badge bg-${getStatusColor(reservation.status)}">${reservation.status}</span>`);
+                    $('#viewCreatedAt').text(new Date(reservation.createdAt).toLocaleString());
+                    $('#viewUpdatedAt').text(reservation.updatedAt ? new Date(reservation.updatedAt).toLocaleString() : 'N/A');
+
+                    // Show/hide rejection reason
+                    $('#rejectionReasonSection').toggle(reservation.status === 'Rejected');
+                    if (reservation.status === 'Rejected') {
+                        $('#viewRejectionReason').text(reservation.rejectionReason || 'No reason provided');
+                    }
+
+                    // Show/hide notes
+                    $('#notesSection').toggle(!!reservation.notes);
+                    $('#viewNotes').text(reservation.notes || '');
+                }
+            });
+
+            // Handle Delete Modal
+            $('#deleteReservationModal').on('show.bs.modal', function (event) {
+                var button = $(event.relatedTarget);
+                var reservationId = button.data('reservation-id');
+                $('#deleteReservationId').val(reservationId);
+            });
+
+            // Export to Excel
+            $('#exportExcel').on('click', function() {
+                table.button('.buttons-excel').trigger();
+            });
+        });
+
+        function getStatusColor(status) {
+            switch (status) {
+                case 'Pending': return 'warning';
+                case 'Approved': return 'success';
+                case 'Rejected': return 'danger';
+                case 'Cancelled': return 'secondary';
+                default: return 'primary';
+            }
+        }
+    </script>
+} 

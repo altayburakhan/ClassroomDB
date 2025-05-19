@@ -1,0 +1,122 @@
+@page
+@model ClassroomSystem.Pages.Instructor.FeedbackModel
+@{
+    ViewData["Title"] = "Feedback & Contact";
+    Layout = "Instructor/_Layout";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">Feedback & Contact</h1>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Submit Feedback</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" asp-page-handler="SubmitFeedback">
+                        <div class="mb-3">
+                            <label class="form-label">Classroom</label>
+                            <select class="form-select" name="classroomId" required>
+                                <option value="">Select Classroom</option>
+                                @foreach (var classroom in Model.Classrooms)
+                                {
+                                    <option value="@classroom.Id">@classroom.Name</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Rating</label>
+                            <div class="rating">
+                                @for (int i = 5; i >= 1; i--)
+                                {
+                                    <input type="radio" name="rating" value="@i" id="star@i" required>
+                                    <label for="star@i"><i class="fas fa-star"></i></label>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Comment</label>
+                            <textarea class="form-control" name="comment" rows="4" required 
+                                    placeholder="Please provide your feedback about the classroom..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-2"></i>Submit Feedback
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">My Previous Feedback</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.PreviousFeedback.Any())
+                    {
+                        <div class="list-group">
+                            @foreach (var feedback in Model.PreviousFeedback)
+                            {
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="mb-0">@feedback.Classroom.Name</h6>
+                                        <small class="text-muted">@feedback.CreatedAt.ToString("g")</small>
+                                    </div>
+                                    <div class="mb-2">
+                                        @for (int i = 1; i <= 5; i++)
+                                        {
+                                            <i class="fas fa-star @(i <= feedback.Rating ? "text-warning" : "text-muted")"></i>
+                                        }
+                                    </div>
+                                    <p class="mb-1">@feedback.Comment</p>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            You haven't submitted any feedback yet.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .rating {
+            display: flex;
+            flex-direction: row-reverse;
+            justify-content: flex-end;
+        }
+
+        .rating input {
+            display: none;
+        }
+
+        .rating label {
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: #ddd;
+            padding: 0 0.1em;
+        }
+
+        .rating input:checked ~ label,
+        .rating label:hover,
+        .rating label:hover ~ label {
+            color: #ffc107;
+        }
+    </style>
+} 

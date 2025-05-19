@@ -1,0 +1,29 @@
+﻿@page
+@model ClassroomSystem.Pages.IndexModel
+@{
+    ViewData["Title"] = "Classroom Reservation System";
+    Layout = "_LoginLayout";
+}
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <h1 class="display-4 mb-4">Welcome to Classroom Reservation System</h1>
+            <p class="lead mb-4">A comprehensive platform for managing classroom reservations and academic scheduling.</p>
+            
+            @if (!User.Identity.IsAuthenticated)
+            {
+                <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                    <a href="/Account/Login" class="btn btn-primary btn-lg px-4 gap-3">Login</a>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    <p class="mb-0">You are logged in as <strong>@User.FindFirst("FullName")?.Value</strong></p>
+                    <p class="mb-0">Role: <strong>@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</strong></p>
+                </div>
+            }
+        </div>
+    </div>
+</div>

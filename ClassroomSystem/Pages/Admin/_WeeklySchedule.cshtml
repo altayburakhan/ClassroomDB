@@ -1,0 +1,30 @@
+@using ClassroomSystem.Models
+@model List<Reservation>
+
+<div class="weekly-schedule">
+    <div class="row">
+        @foreach (DayOfWeek day in Enum.GetValues(typeof(DayOfWeek)))
+        {
+            <div class="col">
+                <h5>@day</h5>
+                @foreach (var reservation in Model.Where(r => r.StartTime.DayOfWeek == day))
+                {
+                    <div class="reservation-item">
+                        <strong>@reservation.Classroom.Name</strong>
+                        <p>@reservation.StartTime.ToString("HH:mm") - @reservation.EndTime.ToString("HH:mm")</p>
+                        <p>@reservation.User.FullName</p>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .reservation-item {
+        padding: 5px;
+        background-color: #e9ecef;
+        border-radius: 4px;
+        margin: 2px 0;
+    }
+</style> 

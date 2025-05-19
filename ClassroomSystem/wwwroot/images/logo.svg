@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background Circle -->
+    <circle cx="100" cy="100" r="90" fill="#4e73df" opacity="0.1"/>
+    
+    <!-- Building Icon -->
+    <path d="M60 160V80L100 40L140 80V160H60Z" fill="#4e73df"/>
+    
+    <!-- Windows -->
+    <rect x="75" y="90" width="20" height="20" fill="white"/>
+    <rect x="105" y="90" width="20" height="20" fill="white"/>
+    <rect x="75" y="120" width="20" height="20" fill="white"/>
+    <rect x="105" y="120" width="20" height="20" fill="white"/>
+    
+    <!-- Door -->
+    <rect x="85" y="140" width="30" height="20" fill="#2e59d9"/>
+    
+    <!-- Text -->
+    <text x="100" y="190" font-family="Arial" font-size="16" fill="#4e73df" text-anchor="middle">Classroom System</text>
+</svg> 

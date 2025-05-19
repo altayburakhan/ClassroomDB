@@ -1,0 +1,177 @@
+@page
+@model ClassroomSystem.Pages.Account.LoginModel
+@{
+    ViewData["Title"] = "Login";
+    Layout = "_LoginLayout";
+}
+
+@section Styles {
+    <style>
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        .login-container {
+            margin-top: 8vh;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        .card-header {
+            background: #4e73df;
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 1.5rem;
+        }
+        .card-header h3 {
+            margin: 0;
+            font-weight: 600;
+        }
+        .form-control {
+            border-radius: 10px;
+            padding: 0.8rem 1rem;
+            border: 1px solid #e3e6f0;
+        }
+        .form-control:focus {
+            border-color: #4e73df;
+            box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+        }
+        .btn-primary {
+            background: #4e73df;
+            border: none;
+            border-radius: 10px;
+            padding: 0.8rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn-primary:hover {
+            background: #2e59d9;
+            transform: translateY(-1px);
+        }
+        .form-check-input:checked {
+            background-color: #4e73df;
+            border-color: #4e73df;
+        }
+        .validation-summary-errors {
+            background-color: #f8d7da;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .validation-summary-errors ul {
+            margin-bottom: 0;
+            padding-left: 1rem;
+        }
+        .system-logo {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .system-logo img {
+            max-width: 150px;
+            height: auto;
+        }
+        .form-floating {
+            position: relative;
+        }
+        .form-floating label {
+            padding: 1rem;
+        }
+        .form-floating input {
+            height: calc(3.5rem + 2px);
+            padding: 1rem 0.75rem;
+        }
+    </style>
+}
+
+<div class="container login-container">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="system-logo">
+                <img src="~/images/logo.png" alt="Classroom System Logo" />
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center">Welcome Back!</h3>
+                </div>
+                <div class="card-body p-4">
+                    <form id="loginForm" method="post">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                        
+                        <div class="form-floating mb-3">
+                            <input asp-for="Input.Email" class="form-control" placeholder="name@example.com" />
+                            <label asp-for="Input.Email">Email address</label>
+                            <span asp-validation-for="Input.Email" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="form-floating mb-3">
+                            <input asp-for="Input.Password" class="form-control" type="password" placeholder="Password" />
+                            <label asp-for="Input.Password">Password</label>
+                            <span asp-validation-for="Input.Password" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input asp-for="Input.RememberMe" class="form-check-input" />
+                            <label asp-for="Input.RememberMe" class="form-check-label">Remember me</label>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary" id="loginButton">
+                                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                Sign In
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        $(document).ready(function() {
+            // Form submission handling
+            $('#loginForm').on('submit', function() {
+                var $button = $('#loginButton');
+                var $spinner = $button.find('.spinner-border');
+                
+                // Disable button and show spinner
+                $button.prop('disabled', true);
+                $spinner.removeClass('d-none');
+                
+                // Re-enable button after 2 seconds if form submission fails
+                setTimeout(function() {
+                    $button.prop('disabled', false);
+                    $spinner.addClass('d-none');
+                }, 2000);
+            });
+
+            // Input field animations
+            $('.form-control').on('focus', function() {
+                $(this).parent().addClass('focused');
+            }).on('blur', function() {
+                if (!$(this).val()) {
+                    $(this).parent().removeClass('focused');
+                }
+            });
+
+            // Password visibility toggle
+            $('.form-floating').each(function() {
+                var $input = $(this).find('input[type="password"]');
+                if ($input.length) {
+                    var $toggle = $('<span class="password-toggle"><i class="fas fa-eye"></i></span>');
+                    $(this).append($toggle);
+                    
+                    $toggle.on('click', function() {
+                        var type = $input.attr('type') === 'password' ? 'text' : 'password';
+                        $input.attr('type', type);
+                        $(this).find('i').toggleClass('fa-eye fa-eye-slash');
+                    });
+                }
+            });
+        });
+    </script>
+} 
