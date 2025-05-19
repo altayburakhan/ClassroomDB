@@ -2,7 +2,7 @@
 @model ClassroomSystem.Pages.Account.LoginModel
 @{
     ViewData["Title"] = "Login";
-    Layout = "_LoginLayout";
+    Layout = "_Layout";
 }
 
 @section Styles {
@@ -85,29 +85,27 @@
     </style>
 }
 
-<div class="container login-container">
-    <div class="row justify-content-center">
-        <div class="col-md-5">
-            <div class="system-logo">
-                <img src="~/images/logo.png" alt="Classroom System Logo" />
-            </div>
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="text-center">Welcome Back!</h3>
-                </div>
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-6">
+            <div class="card shadow">
                 <div class="card-body p-4">
-                    <form id="loginForm" method="post">
-                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <h2 class="text-center mb-4">Login</h2>
+                    
+                    <form method="post" id="loginForm">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
                         
-                        <div class="form-floating mb-3">
-                            <input asp-for="Input.Email" class="form-control" placeholder="name@example.com" />
-                            <label asp-for="Input.Email">Email address</label>
+                        <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
+                        
+                        <div class="mb-3">
+                            <label asp-for="Input.Email" class="form-label">Email</label>
+                            <input asp-for="Input.Email" class="form-control" autocomplete="username" />
                             <span asp-validation-for="Input.Email" class="text-danger"></span>
                         </div>
                         
-                        <div class="form-floating mb-3">
-                            <input asp-for="Input.Password" class="form-control" type="password" placeholder="Password" />
-                            <label asp-for="Input.Password">Password</label>
+                        <div class="mb-3">
+                            <label asp-for="Input.Password" class="form-label">Password</label>
+                            <input asp-for="Input.Password" class="form-control" autocomplete="current-password" />
                             <span asp-validation-for="Input.Password" class="text-danger"></span>
                         </div>
                         
@@ -117,9 +115,8 @@
                         </div>
                         
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-primary" id="loginButton">
-                                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                                Sign In
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-sign-in-alt me-2"></i>Log in
                             </button>
                         </div>
                     </form>
@@ -133,44 +130,13 @@
     <partial name="_ValidationScriptsPartial" />
     <script>
         $(document).ready(function() {
-            // Form submission handling
+            // Focus on email field when page loads
+            $('#Input_Email').focus();
+            
+            // Prevent double form submission
             $('#loginForm').on('submit', function() {
-                var $button = $('#loginButton');
-                var $spinner = $button.find('.spinner-border');
-                
-                // Disable button and show spinner
-                $button.prop('disabled', true);
-                $spinner.removeClass('d-none');
-                
-                // Re-enable button after 2 seconds if form submission fails
-                setTimeout(function() {
-                    $button.prop('disabled', false);
-                    $spinner.addClass('d-none');
-                }, 2000);
-            });
-
-            // Input field animations
-            $('.form-control').on('focus', function() {
-                $(this).parent().addClass('focused');
-            }).on('blur', function() {
-                if (!$(this).val()) {
-                    $(this).parent().removeClass('focused');
-                }
-            });
-
-            // Password visibility toggle
-            $('.form-floating').each(function() {
-                var $input = $(this).find('input[type="password"]');
-                if ($input.length) {
-                    var $toggle = $('<span class="password-toggle"><i class="fas fa-eye"></i></span>');
-                    $(this).append($toggle);
-                    
-                    $toggle.on('click', function() {
-                        var type = $input.attr('type') === 'password' ? 'text' : 'password';
-                        $input.attr('type', type);
-                        $(this).find('i').toggleClass('fa-eye fa-eye-slash');
-                    });
-                }
+                $(this).find('button[type="submit"]').prop('disabled', true);
+                return true;
             });
         });
     </script>

@@ -188,21 +188,38 @@ namespace ClassroomSystem.Pages.Instructor
                 // Add holidays
                 foreach (var h in holidays)
                 {
-                    var holidayName = await _holidayService.GetHolidayNameAsync(h);
-                    CalendarEvents.Add(new CalendarEvent
+                    try
                     {
-                        Id = $"holiday-{h:yyyyMMdd}",
-                        Title = holidayName ?? "Holiday",
-                        Start = h,
-                        End = h.AddDays(1),
-                        ClassName = "event-holiday",
-                        AllDay = true,
-                        ExtendedProps = new Dictionary<string, object>
+                        var holidayName = await _holidayService.GetHolidayNameAsync(h);
+                        var turkishHolidays = TurkishHolidays.GetHolidaysForYear(h.Year);
+                        var turkishHoliday = turkishHolidays.FirstOrDefault(th => th.Date.Date == h.Date);
+
+                        var isReligious = turkishHoliday != default ? turkishHoliday.IsReligious : false;
+                        var holidayClassName = isReligious ? "holiday-religious" : "holiday-national";
+                        var finalHolidayName = turkishHoliday != default ? turkishHoliday.Name : (holidayName ?? "Holiday");
+
+                        _logger.LogInformation($"Adding holiday: {finalHolidayName} on {h:yyyy-MM-dd}, IsReligious: {isReligious}");
+
+                        CalendarEvents.Add(new CalendarEvent
                         {
-                            { "isHoliday", true },
-                            { "holidayName", holidayName ?? "Holiday" }
-                        }
-                    });
+                            Id = $"holiday-{h:yyyyMMdd}",
+                            Title = finalHolidayName,
+                            Start = h,
+                            End = h.AddDays(1),
+                            ClassName = holidayClassName,
+                            AllDay = true,
+                            ExtendedProps = new Dictionary<string, object>
+                            {
+                                { "isHoliday", true },
+                                { "isReligious", isReligious },
+                                { "holidayName", finalHolidayName }
+                            }
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Error adding holiday for date {h:yyyy-MM-dd}");
+                    }
                 }
 
                 return Page();

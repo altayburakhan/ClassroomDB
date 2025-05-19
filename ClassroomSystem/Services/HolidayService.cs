@@ -29,14 +29,35 @@ namespace ClassroomSystem.Services
 
         public async Task<List<DateTime>> GetHolidaysForYearAsync(int year)
         {
-            var url = $"{_baseUrl}/{year}/{_countryCode}";
-            var response = await _httpClient.GetAsync(url);
-            response.EnsureSuccessStatusCode();
+            var allHolidays = new HashSet<DateTime>();
 
-            var content = await response.Content.ReadAsStringAsync();
-            var holidays = JsonSerializer.Deserialize<List<HolidayResponse>>(content);
+            // Get holidays from the API
+            try
+            {
+                var url = $"{_baseUrl}/{year}/{_countryCode}";
+                var response = await _httpClient.GetAsync(url);
+                response.EnsureSuccessStatusCode();
 
-            return holidays.Select(h => DateTime.Parse(h.Date)).ToList();
+                var content = await response.Content.ReadAsStringAsync();
+                var apiHolidays = JsonSerializer.Deserialize<List<HolidayResponse>>(content);
+                foreach (var holiday in apiHolidays)
+                {
+                    allHolidays.Add(DateTime.Parse(holiday.Date).Date);
+                }
+            }
+            catch (Exception)
+            {
+                // Log the error but continue to get Turkish holidays
+            }
+
+            // Add Turkish holidays
+            var turkishHolidays = TurkishHolidays.GetHolidaysForYear(year);
+            foreach (var holiday in turkishHolidays)
+            {
+                allHolidays.Add(holiday.Date.Date);
+            }
+
+            return allHolidays.ToList();
         }
 
         public async Task<List<DateTime>> GetHolidaysForDateRangeAsync(DateTime startDate, DateTime endDate)
@@ -58,11 +79,21 @@ namespace ClassroomSystem.Services
         {
             try
             {
-                var response = await _httpClient.GetAsync($"https://date.nager.at/api/v3/PublicHoliday/{date:yyyy-MM-dd}/{_countryCode}");
+                // Check Turkish holidays first
+                var turkishHolidays = TurkishHolidays.GetHolidaysForYear(date.Year);
+                var turkishHoliday = turkishHolidays.FirstOrDefault(h => h.Date.Date == date.Date);
+                if (turkishHoliday != default)
+                {
+                    return turkishHoliday.Name;
+                }
+
+                // If not found in Turkish holidays, check API
+                var response = await _httpClient.GetAsync($"{_baseUrl}/{date.Year}/{_countryCode}");
                 if (response.IsSuccessStatusCode)
                 {
                     var content = await response.Content.ReadAsStringAsync();
-                    var holiday = JsonSerializer.Deserialize<HolidayResponse>(content);
+                    var holidays = JsonSerializer.Deserialize<List<HolidayResponse>>(content);
+                    var holiday = holidays?.FirstOrDefault(h => DateTime.Parse(h.Date).Date == date.Date);
                     return holiday?.Name ?? "Unknown Holiday";
                 }
                 return null;

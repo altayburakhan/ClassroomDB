@@ -77,7 +77,8 @@
                 <span class="badge bg-success me-2">Approved</span>
                 <span class="badge bg-warning me-2">Pending</span>
                 <span class="badge bg-danger me-2">Rejected</span>
-                <span class="badge bg-secondary me-2">Holiday</span>
+                <span class="badge bg-info me-2">National Holiday</span>
+                <span class="badge bg-secondary me-2">Religious Holiday</span>
                 <span class="badge bg-danger me-2"><i class="fas fa-exclamation-triangle"></i> Conflict</span>
             </div>
             <div id="calendar"></div>
@@ -206,6 +207,7 @@
             cursor: pointer;
             border-radius: 4px;
             padding: 2px 4px;
+            margin: 1px 0;
         }
         .fc-event.pending {
             background-color: #ffc107;
@@ -227,6 +229,20 @@
             background-color: #dc3545;
             border-color: #dc3545;
             border-style: dashed;
+        }
+        .fc-event.holiday-national {
+            background-color: #0dcaf0 !important;
+            border-color: #0dcaf0 !important;
+            color: #000 !important;
+            font-weight: bold;
+            padding: 4px !important;
+        }
+        .fc-event.holiday-religious {
+            background-color: #6c757d !important;
+            border-color: #6c757d !important;
+            color: #fff !important;
+            font-weight: bold;
+            padding: 4px !important;
         }
         .calendar-legend {
             font-size: 0.9em;
@@ -301,6 +317,20 @@
             background-color: #0b5ed7;
             border-color: #0a58ca;
         }
+        .fc-daygrid-day.fc-day-today {
+            background-color: rgba(255,220,40,.15) !important;
+        }
+        .fc-daygrid-event {
+            white-space: normal !important;
+            align-items: center;
+            margin: 2px 0;
+        }
+        .fc-daygrid-day-events {
+            margin-bottom: 4px;
+        }
+        .fc-daygrid-day-top {
+            padding: 4px;
+        }
     </style>
 }
 
@@ -314,7 +344,7 @@
             var calendarEvents = @Html.Raw(Json.Serialize(Model.CalendarEvents));
             
             calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'timeGridWeek',
+                initialView: 'dayGridMonth',
                 headerToolbar: {
                     left: 'prev,next today',
                     center: 'title',
@@ -322,34 +352,46 @@
                 },
                 slotMinTime: '08:00:00',
                 slotMaxTime: '17:00:00',
-                allDaySlot: false,
+                allDaySlot: true,
+                displayEventTime: false,
                 slotDuration: '00:30:00',
                 events: calendarEvents,
+                eventDidMount: function(info) {
+                    if (info.event.extendedProps.isHoliday) {
+                        info.el.classList.add(info.event.extendedProps.isReligious ? 'holiday-religious' : 'holiday-national');
+                    }
+                },
                 eventClick: function(info) {
                     showEventDetails(info.event);
                 },
                 dateClick: function(info) {
-                    // Set the clicked date in the reservation form
+                    var clickedDate = info.date;
+                    var holidayEvent = calendar.getEvents().find(function(event) {
+                        return event.extendedProps.isHoliday && 
+                               event.start.toDateString() === clickedDate.toDateString();
+                    });
+
+                    if (holidayEvent) {
+                        alert('Warning: This is a holiday - ' + holidayEvent.extendedProps.holidayName);
+                        return;
+                    }
+
                     document.getElementById('reservationDate').value = info.dateStr;
-                    // Open the modal
                     var modal = new bootstrap.Modal(document.getElementById('addReservationModal'));
                     modal.show();
                 }
             });
             calendar.render();
 
-            // Set default times
             document.getElementById('startTime').value = '08:00';
             document.getElementById('endTime').value = '09:00';
 
-            // Handle start time change
             document.getElementById('startTime').addEventListener('change', function() {
                 var startTime = this.value;
                 var endTimeInput = document.getElementById('endTime');
                 var startHour = parseInt(startTime.split(':')[0]);
                 var startMinute = parseInt(startTime.split(':')[1]);
                 
-                // Set minimum end time to 30 minutes after start time
                 var minEndHour = startHour;
                 var minEndMinute = startMinute + 30;
                 if (minEndMinute >= 60) {
@@ -360,17 +402,14 @@
                 var minEndTime = `${minEndHour.toString().padStart(2, '0')}:${minEndMinute.toString().padStart(2, '0')}`;
                 endTimeInput.min = minEndTime;
                 
-                // If current end time is before new minimum, update it
                 if (endTimeInput.value < minEndTime) {
                     endTimeInput.value = minEndTime;
                 }
             });
 
-            // Form validation and submission
             document.getElementById('reservationForm').addEventListener('submit', function(e) {
                 e.preventDefault();
                 
-                // Basic validation
                 var startTime = document.getElementById('startTime').value;
                 var endTime = document.getElementById('endTime').value;
                 var date = document.getElementById('reservationDate').value;
@@ -382,13 +421,11 @@
                     return;
                 }
 
-                // Show loading state
                 const submitButton = this.querySelector('button[type="submit"]');
                 const originalText = submitButton.innerHTML;
                 submitButton.disabled = true;
                 submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
 
-                // Submit form via AJAX
                 const formData = new FormData(this);
                 
                 fetch('?handler=AddReservation', {
@@ -406,7 +443,6 @@
                 })
                 .then(data => {
                     if (data.success) {
-                        // Add new event to calendar
                         calendar.addEvent({
                             id: data.reservation.id,
                             title: data.reservation.title,
@@ -419,13 +455,11 @@
                             }
                         });
                         
-                        // Close modal and show success message
                         var modal = bootstrap.Modal.getInstance(document.getElementById('addReservationModal'));
                         modal.hide();
                         
                         showAlert('success', 'Reservation request submitted successfully!');
                         
-                        // Reset form
                         this.reset();
                         document.getElementById('startTime').value = '08:00';
                         document.getElementById('endTime').value = '09:00';
@@ -438,7 +472,6 @@
                     showAlert('danger', 'An error occurred while submitting the reservation.');
                 })
                 .finally(() => {
-                    // Restore button state
                     submitButton.disabled = false;
                     submitButton.innerHTML = originalText;
                 });
@@ -454,14 +487,11 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
             
-            // Remove any existing alerts
             document.querySelectorAll('.alert').forEach(alert => alert.remove());
             
-            // Add new alert at the top of the container
             const container = document.querySelector('.container-fluid');
             container.insertBefore(alertDiv, container.firstChild);
             
-            // Auto-dismiss after 5 seconds
             setTimeout(() => {
                 alertDiv.remove();
             }, 5000);
@@ -520,7 +550,6 @@
             }
         }
 
-        // Navigation buttons
         document.getElementById('prevWeek').addEventListener('click', function() {
             calendar.prev();
         });
